@@ -26,3 +26,4 @@ This repository is a Laravel package. Keep the package focused, idiomatic, and e
 - `package-release`: use when preparing changelog, release notes, tags, or GitHub release workflow changes.
 - `package-compatibility`: use when reviewing code, dependencies, or CI against the PHP and Laravel support matrix.
 - `package-generate-skill`: use when updating the bundled Boost skill from the package implementation, README, and examples.
+- `component-design`: use when building, styling, or reviewing UI components and Blade/Livewire views (hierarchy, spacing, type, color, elevation, media, states). Canonical source for Shape's design guidance; styles with Tailwind theme tokens, never arbitrary values.
