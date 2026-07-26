@@ -48,7 +48,19 @@ php artisan vendor:publish --tag="laravel-shape-lang"
 
 ## Usage
 
-<!-- Add a basic usage example here. -->
+Shape components are available in your Blade views through the `shape:` tag prefix:
+
+```blade
+<shape:button class="btn-primary">Save</shape:button>
+
+<shape:button type="submit" />
+```
+
+Attributes are forwarded to the underlying component, so you can style and extend components as you would any Blade component. The same components are also reachable through Laravel's standard namespaced syntax if you prefer it:
+
+```blade
+<x-shape::button>Save</x-shape::button>
+```
 
 ## Changelog
 
