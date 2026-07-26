@@ -20,7 +20,7 @@ class ShapeServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/laravel-shape.php', 'laravel-shape');
+        $this->mergeConfigFrom(__DIR__.'/../config/shape.php', 'shape');
 
         $this->app->singleton(Shape::class);
     }
@@ -30,9 +30,9 @@ class ShapeServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->loadViewsFrom(__DIR__.'/../resources/views', 'laravel-shape');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'shape');
 
-        $this->loadTranslationsFrom(__DIR__.'/../lang', 'laravel-shape');
+        $this->loadTranslationsFrom(__DIR__.'/../lang', 'shape');
 
         $this->registerBladeComponents();
 
@@ -41,16 +41,16 @@ class ShapeServiceProvider extends ServiceProvider
         }
 
         $this->publishes([
-            __DIR__.'/../config/laravel-shape.php' => config_path('laravel-shape.php'),
-        ], ['laravel-shape', 'laravel-shape-config']);
+            __DIR__.'/../config/shape.php' => config_path('shape.php'),
+        ], ['shape', 'shape-config']);
 
         $this->publishes([
-            __DIR__.'/../resources/views' => resource_path('views/vendor/laravel-shape'),
-        ], ['laravel-shape', 'laravel-shape-views']);
+            __DIR__.'/../resources/views' => resource_path('views/vendor/shape'),
+        ], ['shape', 'shape-views']);
 
         $this->publishes([
-            __DIR__.'/../lang' => $this->app->langPath('vendor/laravel-shape'),
-        ], ['laravel-shape', 'laravel-shape-lang']);
+            __DIR__.'/../lang' => $this->app->langPath('vendor/shape'),
+        ], ['shape', 'shape-lang']);
 
         $this->commands([
             ShapeCommand::class,
@@ -67,7 +67,7 @@ class ShapeServiceProvider extends ServiceProvider
      */
     private function registerBladeComponents(): void
     {
-        Blade::anonymousComponentNamespace('laravel-shape::components', self::TAG_PREFIX);
+        Blade::anonymousComponentNamespace('shape::components', self::TAG_PREFIX);
 
         Blade::prepareStringsForCompilationUsing(function (string $template): string {
             return preg_replace(

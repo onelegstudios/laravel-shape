@@ -11,12 +11,12 @@ class ShapeCommand extends Command
     /**
      * The command signature.
      */
-    protected $signature = 'laravel-shape:placeholder';
+    protected $signature = 'shape:placeholder';
 
     /**
      * The command description.
      */
-    protected $description = 'Placeholder Artisan command shipped by the package laravel-shape.';
+    protected $description = 'Placeholder Artisan command shipped by Shape.';
 
     /**
      * Execute the console command.

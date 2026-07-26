@@ -23,7 +23,7 @@ composer require onelegstudios/laravel-shape
 You may publish all of the package's resources at once:
 
 ```bash
-php artisan vendor:publish --tag="laravel-shape"
+php artisan vendor:publish --tag="shape"
 ```
 
 Or, you may publish each resource individually:
@@ -31,19 +31,19 @@ Or, you may publish each resource individually:
 ### Publishing the Configuration File
 
 ```bash
-php artisan vendor:publish --tag="laravel-shape-config"
+php artisan vendor:publish --tag="shape-config"
 ```
 
 ### Publishing the Views
 
 ```bash
-php artisan vendor:publish --tag="laravel-shape-views"
+php artisan vendor:publish --tag="shape-views"
 ```
 
 ### Publishing the Translations
 
 ```bash
-php artisan vendor:publish --tag="laravel-shape-lang"
+php artisan vendor:publish --tag="shape-lang"
 ```
 
 ## Usage

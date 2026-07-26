@@ -13,19 +13,19 @@ it('returns the same instance from the container', function () {
 });
 
 it('merges the package config', function () {
-    expect(config('laravel-shape.placeholder'))->toBe('default');
+    expect(config('shape.placeholder'))->toBe('default');
 });
 
 it('loads the package translations', function () {
-    expect(trans('laravel-shape::messages.placeholder'))->toBe('Shape placeholder translation.');
+    expect(trans('shape::messages.placeholder'))->toBe('Shape placeholder translation.');
 });
 
 it('loads the package views', function () {
-    expect(view()->exists('laravel-shape::placeholder'))->toBeTrue();
+    expect(view()->exists('shape::placeholder'))->toBeTrue();
 });
 
 it('registers the artisan command', function () {
-    $this->artisan('laravel-shape:placeholder')
+    $this->artisan('shape:placeholder')
         ->expectsOutputToContain('Shape placeholder command executed.')
         ->assertSuccessful();
 });
