@@ -52,6 +52,10 @@ class ShapeServiceProvider extends ServiceProvider
             __DIR__.'/../lang' => $this->app->langPath('vendor/shape'),
         ], ['shape', 'shape-lang']);
 
+        $this->publishes([
+            __DIR__.'/../resources/css' => resource_path('css/vendor/shape'),
+        ], ['shape', 'shape-css']);
+
         $this->commands([
             ShapeCommand::class,
         ]);

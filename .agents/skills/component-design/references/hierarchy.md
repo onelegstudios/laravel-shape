@@ -29,6 +29,25 @@
   *prominence*, not just color: primary = most prominent, secondary = ghost/soft, destructive
   isn't red until the user is near the point of no return.
 
-**For Shape:** `button`, `badge`, `alert` ship `primary / secondary / tertiary / danger`
-variants whose emphasis is built from weight + color + size — a fixed set of utility recipes,
-not one-off styles.
+**For Shape:** emphasis and meaning are **two separate props**, because `primary` as an
+emphasis level and `primary` as a colour role are different questions and collide if merged:
+
+- **`variant`** — the emphasis ladder, named for its treatment:
+  `solid` (primary) · `soft` (secondary) · `ghost` (tertiary) · `outline`.
+  Emphasis is built from weight + color, per the rules above.
+- **`color`** — a semantic role from the theme (`primary / success / warning / danger /
+  info / neutral`), never a raw palette hue. See `color.md`.
+
+**Defaults are `variant="outline" color="neutral"` — the quiet button, on purpose.** A screen
+should carry one primary action, so the loud one is opt-in (`variant="solid"`) instead of what
+you get for free. This costs two props on the hero button and none on the other five, which is
+the right way round: the emphasis decision should be deliberate.
+
+`outline` beats `soft` for that default despite `finishing-touches.md` ranking borders last.
+That rule assumes you control the surface; a packaged component doesn't. A tinted fill
+disappears against a similarly tinted page, a border never does. **When you *do* control the
+surface — composing a screen, not shipping a component — `soft` still outranks `outline`.**
+
+`button`, `badge`, and `alert` ship this pair as a fixed set of utility recipes, not one-off
+styles. Size, radius, and elevation stay on their own props — folding them into `variant`
+brings back the combinatorial naming this split exists to avoid.

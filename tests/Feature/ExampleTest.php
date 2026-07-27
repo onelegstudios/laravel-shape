@@ -21,7 +21,7 @@ it('loads the package translations', function () {
 });
 
 it('loads the package views', function () {
-    expect(view()->exists('shape::placeholder'))->toBeTrue();
+    expect(view()->exists('shape::components.button'))->toBeTrue();
 });
 
 it('registers the artisan command', function () {

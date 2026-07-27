@@ -5,12 +5,12 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Blade;
 
 it('renders a component through the branded shape tag', function () {
-    $html = Blade::render('<shape:button class="primary">Save</shape:button>');
+    $html = Blade::render('<shape:button class="w-full">Save</shape:button>');
 
     expect($html)
         ->toContain('<button')
         ->toContain('type="button"')
-        ->toContain('class="primary"')
+        ->toContain('w-full')
         ->toContain('Save');
 });
 
