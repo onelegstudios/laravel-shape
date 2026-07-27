@@ -41,6 +41,13 @@ it('publishes the translations under the shape tag', function () {
         ->and($paths[0])->toEndWith('lang/vendor/shape');
 });
 
+it('publishes the theme stylesheet under the shape tag', function () {
+    $paths = publishDestinations('shape-css');
+
+    expect($paths)->toHaveCount(1)
+        ->and($paths[0])->toEndWith('css/vendor/shape');
+});
+
 it('publishes every resource under the shared shape tag', function () {
-    expect(publishDestinations('shape'))->toHaveCount(3);
+    expect(publishDestinations('shape'))->toHaveCount(4);
 });

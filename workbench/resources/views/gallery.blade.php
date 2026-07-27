@@ -5,8 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Shape — Component Gallery</title>
 
-    {{-- Dev-only styling for the workbench chrome. Not part of the package. --}}
-    <script src="https://cdn.tailwindcss.com"></script>
+    {{-- Dev-only Tailwind build for the workbench. Not part of the package. --}}
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    {{-- The package's real theme, not a copy of it: the gallery previews the same
+         role definitions a consuming app gets from resources/css/shape.css, so a
+         change there shows up here. The browser build scans the DOM rather than
+         the filesystem, which is why the route strips the @source directive. --}}
+    <style type="text/tailwindcss">
+        /* This block is the entry stylesheet, so it has to pull Tailwind in
+           itself -- without this the browser build compiles to nothing. */
+        @import "tailwindcss";
+
+        {!! $theme !!}
+    </style>
 </head>
 <body class="h-full bg-slate-50 text-slate-900 antialiased">
     <div class="mx-auto max-w-3xl px-6 py-16">
@@ -29,7 +41,7 @@
                         <h2 class="text-sm font-semibold text-slate-700">{{ $example['title'] }}</h2>
                     </div>
 
-                    <div class="flex items-center gap-4 px-5 py-8">
+                    <div class="flex flex-wrap items-center gap-4 px-5 py-8 {{ $example['surface'] ?? '' }}">
                         {{-- The rendered component --}}
                         {!! Blade::render($example['source']) !!}
                     </div>
