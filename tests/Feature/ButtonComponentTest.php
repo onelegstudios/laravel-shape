@@ -23,6 +23,47 @@ it('renders each step of the emphasis ladder differently', function (string $var
     'outline is the only bordered step' => ['outline', 'border-primary-border'],
 ]);
 
+it('renders each rung of the size scale differently', function (string $size, string $expected) {
+    $html = Blade::render('<shape:button size="'.$size.'">Save</shape:button>');
+
+    expect($html)->toContain($expected);
+})->with([
+    'xs is the densest rung' => ['xs', 'gap-1 px-2 py-1 text-xs'],
+    'sm suits a toolbar' => ['sm', 'gap-1.5 px-3 py-1.5 text-sm'],
+    'md is the form default' => ['md', 'gap-2 px-4 py-2 text-sm'],
+    'lg is the only one that grows the text' => ['lg', 'gap-2.5 px-5 py-2.5 text-base'],
+]);
+
+it('sizes to md when asked for nothing', function () {
+    expect(Blade::render('<shape:button>Save</shape:button>'))
+        ->toBe(Blade::render('<shape:button size="md">Save</shape:button>'));
+});
+
+it('falls back to the default size when given one it does not have', function () {
+    // Sizes are a closed set for the same reason variants are: four rungs, no way
+    // to add a fifth, so an unknown one is a typo rather than an extension point.
+    expect(Blade::render('<shape:button size="huge">Save</shape:button>'))
+        ->toBe(Blade::render('<shape:button>Save</shape:button>'));
+});
+
+it('composes size with variant and colour', function () {
+    // The three axes are independent: nothing about being small should make a
+    // button quieter, and nothing about being loud should make it bigger.
+    $html = Blade::render('<shape:button size="xs" variant="solid" color="danger">Delete</shape:button>');
+
+    expect($html)
+        ->toContain('px-2 py-1 text-xs')
+        ->toContain('bg-danger-fill')
+        ->toContain('font-semibold');
+});
+
+it('keeps the radius out of the size scale so one token restyles every rung', function (string $size) {
+    // Radius is the component's shape, not its size -- a consumer overriding
+    // --radius-md gets all four rungs, not the one that happened to name it.
+    expect(Blade::render('<shape:button size="'.$size.'">Save</shape:button>'))
+        ->toContain('rounded-md');
+})->with(['xs', 'sm', 'md', 'lg']);
+
 it('names only semantic colour roles, never raw palette hues', function (string $color) {
     $html = Blade::render('<shape:button color="'.$color.'">Save</shape:button>');
 
@@ -79,12 +120,13 @@ it('merges consumer classes alongside the recipe', function () {
         ->toContain('w-full');
 });
 
-it('does not leak the variant and colour props onto the rendered element', function () {
-    $html = Blade::render('<shape:button variant="ghost" color="info">Save</shape:button>');
+it('does not leak the styling props onto the rendered element', function () {
+    $html = Blade::render('<shape:button variant="ghost" color="info" size="lg">Save</shape:button>');
 
     expect($html)
         ->not->toContain('variant="ghost"')
-        ->not->toContain('color="info"');
+        ->not->toContain('color="info"')
+        ->not->toContain('size="lg"');
 });
 
 it('still honours a caller-supplied type attribute', function () {
