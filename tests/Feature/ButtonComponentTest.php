@@ -136,3 +136,59 @@ it('still honours a caller-supplied type attribute', function () {
         ->toContain('type="submit"')
         ->not->toContain('type="button"');
 });
+
+it('takes the value of every unnamed prop from config', function () {
+    // The point of configurable defaults: an application states its house style
+    // once and an unadorned button follows, without a call site being touched.
+    config()->set('shape.components.button', [
+        'variant' => 'solid',
+        'color' => 'primary',
+        'size' => 'lg',
+    ]);
+
+    expect(Blade::render('<shape:button>Save</shape:button>'))
+        ->toBe(Blade::render('<shape:button variant="solid" color="primary" size="lg">Save</shape:button>'));
+});
+
+it('lets a call site override the configured default', function () {
+    // Config moves the starting point; it does not take the choice away.
+    config()->set('shape.components.button', [
+        'variant' => 'solid',
+        'color' => 'primary',
+        'size' => 'lg',
+    ]);
+
+    expect(Blade::render('<shape:button variant="ghost" color="danger" size="xs">Delete</shape:button>'))
+        ->toContain('text-danger-on-tint')
+        ->toContain('px-2 py-1 text-xs')
+        ->not->toContain('bg-primary-fill');
+});
+
+it('ships config defaults that match the fallbacks baked into the component', function () {
+    // The component repeats the packaged defaults as a floor, which makes them
+    // two copies of one fact -- and two copies drift. Rendering with the shipped
+    // config and then with no config at all has to come out identical.
+    $configured = Blade::render('<shape:button>Save</shape:button>');
+
+    config()->set('shape.components.button', null);
+
+    expect(Blade::render('<shape:button>Save</shape:button>'))->toBe($configured);
+});
+
+it('falls back to a packaged default rather than rendering an unstyled button', function (mixed $configured) {
+    // Laravel merges package config one level deep, so a published file that has
+    // gone stale is not a hypothetical: drop a key and nothing restores it. What
+    // must not happen is a prop resolving to nothing and a class landing empty.
+    config()->set('shape.components.button', $configured);
+
+    expect(Blade::render('<shape:button>Save</shape:button>'))
+        ->toContain('border-neutral-border')
+        ->toContain('gap-2 px-4 py-2 text-sm');
+})->with([
+    'the whole block removed' => [null],
+    'an empty block' => [[]],
+    'a block missing every key' => [['unrelated' => 'value']],
+    'a partial block' => [['variant' => 'outline']],
+    'a value of the wrong type' => [['variant' => ['solid'], 'color' => 3, 'size' => ['lg']]],
+    'a block that is not an array' => ['solid'],
+]);

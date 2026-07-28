@@ -200,7 +200,8 @@ Shape components are available in your Blade views through the `shape:` tag pref
 Components take three styling props. `variant` sets emphasis — `solid`, `soft`, `ghost`, or
 `outline` — and `color` names a semantic role. Both default to the quiet option
 (`outline` / `neutral`), so the prominent button on a screen is an explicit choice rather
-than the one you get by accident.
+than the one you get by accident. If those are the wrong defaults for your application, they
+are configurable — see [Component Defaults](#component-defaults).
 
 The axes are independent, and every combination is valid. `solid` usually carries a
 screen's one primary action, but a solid neutral or a soft danger is a perfectly ordinary
@@ -220,6 +221,36 @@ do not, so a small button is denser without being quieter and every rung answers
 [WCAG 2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html) allows —
 and `lg` stands 44px. Anything larger is a landing page rather than an interface; reach for
 your own classes there.
+
+### Component Defaults
+
+Every styling prop falls back to a value in `config/shape.php`, so an application states its
+house style once instead of repeating it at each call site. Publish the file:
+
+```bash
+php artisan vendor:publish --tag="shape-config"
+```
+
+```php
+'components' => [
+
+    'button' => [
+        'variant' => 'solid',
+        'color' => 'primary',
+        'size' => 'md',
+    ],
+
+],
+```
+
+With that, `<shape:button>Save</shape:button>` renders a solid primary button, and a call site
+that names a prop still wins — config moves the starting point rather than taking the choice
+away.
+
+Laravel merges package config one level deep, which means a published copy of this file
+replaces the `components` block wholesale rather than being topped up key by key. Deleting a
+key is therefore safe but not neutral: the prop falls back to Shape's own default
+(`outline` / `neutral` / `md`), not to whatever a later version of the package ships.
 
 Attributes are forwarded to the underlying component, so you can style and extend components as you would any Blade component. The same components are also reachable through Laravel's standard namespaced syntax if you prefer it:
 

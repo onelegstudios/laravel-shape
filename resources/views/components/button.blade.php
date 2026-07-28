@@ -1,10 +1,24 @@
 @props([
-    'variant' => 'outline',
-    'color' => 'neutral',
-    'size' => 'md',
+    'variant' => null,
+    'color' => null,
+    'size' => null,
 ])
 
 @php
+    // A prop left unnamed at the call site takes its value from config, so an
+    // application can move the starting point for every button at once. The
+    // packaged defaults are repeated here as a floor rather than left to config
+    // alone: `mergeConfigFrom` merges one level deep, so a consumer who publishes
+    // the config file and later drops a key gets nothing back from the package,
+    // and a prop resolving to nothing renders a button with no styling at all.
+    // Non-strings are filtered for the same reason -- a config typo should cost a
+    // default, not a TypeError in a view.
+    $defaults = array_filter((array) config('shape.components.button'), 'is_string');
+
+    $variant ??= $defaults['variant'] ?? 'outline';
+    $color ??= $defaults['color'] ?? 'neutral';
+    $size ??= $defaults['size'] ?? 'md';
+
     // Emphasis ladder, not a colour list: `solid` carries the most weight, `soft`
     // and `outline` the middle, `ghost` the least. A screen usually spends `solid`
     // once, on its single primary action -- but that is a habit, not a rule, and

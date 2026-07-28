@@ -13,7 +13,7 @@ it('returns the same instance from the container', function () {
 });
 
 it('merges the package config', function () {
-    expect(config('shape.placeholder'))->toBe('default');
+    expect(config('shape.components.button.variant'))->toBe('outline');
 });
 
 it('loads the package translations', function () {
