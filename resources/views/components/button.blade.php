@@ -1,6 +1,7 @@
 @props([
     'variant' => 'outline',
     'color' => 'neutral',
+    'size' => 'md',
 ])
 
 @php
@@ -26,13 +27,38 @@
     // these class names literally, so shape.css declares the built-in set through
     // `@source inline()` -- that block is the other half of this, and the one line
     // a consumer adds to claim a role of their own.
-    $base = 'inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50';
+    //
+    // Radius lives here rather than in a size recipe: it is the component's shape
+    // rather than its size, and keeping it in one place leaves a consumer a single
+    // `--radius-md` to override instead of one per rung.
+    $base = 'inline-flex items-center justify-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50';
 
     $recipes = [
         'solid' => 'font-semibold shadow-sm bg-:role-fill text-:role-on-fill hover:bg-:role-fill-hover hover:shadow-md active:shadow-sm focus-visible:outline-:role-ring',
         'soft' => 'font-medium bg-:role-tint text-:role-on-tint hover:bg-:role-tint-hover focus-visible:outline-:role-ring',
         'ghost' => 'font-medium text-:role-on-tint hover:bg-:role-tint focus-visible:outline-:role-ring',
         'outline' => 'font-medium border border-:role-border text-:role-on-tint hover:bg-:role-tint focus-visible:outline-:role-ring',
+    ];
+
+    // Size is density, not emphasis: `md` is the button a form gets, `sm` and `xs`
+    // are what a toolbar or a table row can afford, `lg` is for a screen whose one
+    // action is the point. It composes with the other two props like they compose
+    // with each other -- a small solid danger button is an ordinary thing to want.
+    //
+    // Three things change, and they are written out per rung rather than derived
+    // from a ratio, because padding, text size, and the gap holding an icon off a
+    // label each have their own comfortable range and none of them scales with the
+    // others. Weight belongs to the variant above, so it does not appear here.
+    //
+    // Both ends are deliberate. `xs` stands 24px tall, the smallest target WCAG
+    // 2.5.8 allows; `lg` stands 44px, the size a thumb actually wants. Anything
+    // bigger than `lg` is a landing page rather than an interface, and merged
+    // classes cover it without the library having an opinion.
+    $sizes = [
+        'xs' => 'gap-1 px-2 py-1 text-xs',
+        'sm' => 'gap-1.5 px-3 py-1.5 text-sm',
+        'md' => 'gap-2 px-4 py-2 text-sm',
+        'lg' => 'gap-2.5 px-5 py-2.5 text-base',
     ];
 
     // Variants are a closed set, so an unknown one falls back. Colours are not:
@@ -43,8 +69,9 @@
     $role = preg_match('/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/', $color) === 1 ? $color : 'neutral';
 
     $classes = str_replace(':role', $role, $recipes[$variant] ?? $recipes['outline']);
+    $scale = $sizes[$size] ?? $sizes['md'];
 @endphp
 
-<button {{ $attributes->merge(['type' => 'button', 'class' => $base.' '.$classes]) }}>
+<button {{ $attributes->merge(['type' => 'button', 'class' => $base.' '.$scale.' '.$classes]) }}>
     {{ $slot }}
 </button>

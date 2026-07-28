@@ -28,12 +28,26 @@ Route::get('/', function () {
             ]),
         ],
         [
-            'title' => 'Button — the two props compose',
+            // items-center on the row is the gallery's, not the component's: it is
+            // what makes four different heights sit on one line to be compared.
+            'title' => 'Button — density (size)',
             'source' => implode("\n", [
-                '<shape:button variant="solid" color="danger">Delete</shape:button>',
-                '<shape:button variant="soft" color="danger">Delete</shape:button>',
-                '<shape:button variant="ghost" color="danger">Delete</shape:button>',
-                '<shape:button variant="outline" color="danger">Delete</shape:button>',
+                '<shape:button size="xs" variant="solid" color="primary">Extra small</shape:button>',
+                '<shape:button size="sm" variant="solid" color="primary">Small</shape:button>',
+                '<shape:button size="md" variant="solid" color="primary">Medium</shape:button>',
+                '<shape:button size="lg" variant="solid" color="primary">Large</shape:button>',
+            ]),
+        ],
+        [
+            // Emphasis down one row, density across the other: nothing about being
+            // small makes a button quieter, and nothing about being loud makes it
+            // bigger. A dense table row can still shout when it needs to.
+            'title' => 'Button — the three props compose',
+            'source' => implode("\n", [
+                '<shape:button size="xs" variant="solid" color="danger">Delete</shape:button>',
+                '<shape:button size="sm" variant="soft" color="danger">Delete</shape:button>',
+                '<shape:button size="md" variant="ghost" color="danger">Delete</shape:button>',
+                '<shape:button size="lg" variant="outline" color="danger">Delete</shape:button>',
             ]),
         ],
         [
