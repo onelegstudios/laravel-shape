@@ -1,0 +1,38 @@
+/*
+ * The gallery's own chrome: page, panels, rules and text.
+ *
+ * This file is not part of Shape either, and nothing here is package API -- the
+ * `wb-` prefix marks it as the workbench's. It exists so the page around the
+ * previews follows dark mode the same way the components inside them do:
+ * light-dark() resolved against `color-scheme`, which shape.css sets to
+ * `light dark` on :root. No `dark:` variants, no second set of class names.
+ *
+ * That also means the scheme switch in the sidebar needs no CSS of its own. It
+ * puts shape.css's `.light` / `.dark` class on <html>, and chrome and components
+ * turn over together because they read the same signal.
+ */
+
+@theme {
+    --color-wb-page: light-dark(var(--color-slate-50), var(--color-slate-950));
+    --color-wb-panel: light-dark(var(--color-white), var(--color-slate-900));
+
+    /* Two rules, not one: `border` separates a panel from the page, `hairline`
+       divides a panel's own sections and has to be the quieter of the two. */
+    --color-wb-border: light-dark(var(--color-slate-200), var(--color-slate-800));
+    --color-wb-hairline: light-dark(var(--color-slate-100), var(--color-slate-800));
+
+    --color-wb-hover: light-dark(var(--color-slate-50), var(--color-slate-800));
+    --color-wb-active: light-dark(var(--color-slate-100), var(--color-slate-800));
+
+    --color-wb-ink: light-dark(var(--color-slate-900), var(--color-slate-100));
+    --color-wb-ink-muted: light-dark(var(--color-slate-600), var(--color-slate-400));
+    /* The footer, the quietest text on the page -- but still 4.5:1 on the page
+       background in both modes, which slate-400 is not in light mode. */
+    --color-wb-ink-faint: light-dark(var(--color-slate-500), var(--color-slate-500));
+    --color-wb-accent: light-dark(var(--color-indigo-600), var(--color-indigo-400));
+
+    /* The source block stays dark in both modes; in dark mode it drops a step
+       below the panel so the two surfaces still read as separate things. */
+    --color-wb-code: light-dark(var(--color-slate-900), var(--color-slate-950));
+    --color-wb-code-ink: light-dark(var(--color-slate-100), var(--color-slate-300));
+}
