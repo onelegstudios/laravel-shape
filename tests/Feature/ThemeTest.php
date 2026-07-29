@@ -201,7 +201,7 @@ it('documents a safelist recipe that matches the one it actually uses', function
         ->and($documented)->toEqualCanonicalizing($mine);
 })->with([
     'the theme itself' => ['resources/css/shape.css'],
-    'the README' => ['README.md'],
+    'the theming guide' => ['docs/theming.md'],
 ]);
 
 it('ships no colour role beyond the six it uses', function () {
