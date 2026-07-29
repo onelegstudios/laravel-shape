@@ -18,17 +18,22 @@
     ],
     "require": {
         "php": "^8.3",
+        "blade-ui-kit/blade-icons": "^1.10",
         "illuminate/support": "^12.0||^13.0"
     },
     "require-dev": {
         "larastan/larastan": "^3.9",
-        "laravel/pint": "^1.29",
         "laravel/pao": "^1.0",
+        "laravel/pint": "^1.29",
+        "mallardduck/blade-lucide-icons": "^1.26",
         "orchestra/testbench": "^10.0||^11.0",
         "pestphp/pest": "^4.6",
         "pestphp/pest-plugin-laravel": "^4.1",
         "pestphp/pest-plugin-type-coverage": "^4.0",
         "phpstan/extension-installer": "^1.4"
+    },
+    "suggest": {
+        "mallardduck/blade-lucide-icons": "The icon set config points at out of the box (^1.26). Any Blade Icons set works; install it directly so you can swap it with plain composer remove."
     },
     "autoload": {
         "psr-4": {
