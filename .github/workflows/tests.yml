@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
         php: [8.3, 8.4, 8.5]
         laravel: [12.*, 13.*]
         stability: [prefer-lowest, prefer-stable]
@@ -30,6 +30,14 @@ jobs:
             testbench: 10.*
           - laravel: 13.*
             testbench: 11.*
+          # One Windows smoke job. The package itself has no Windows-specific
+          # surface, but blade-icons scans the filesystem to build its manifest,
+          # so keep the configuration a fresh install would produce covered.
+          - os: windows-latest
+            php: 8.5
+            laravel: 13.*
+            testbench: 11.*
+            stability: prefer-stable
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }} - ${{ matrix.os }}
 
