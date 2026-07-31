@@ -21,8 +21,21 @@ config points at out of the box:
 composer require onelegstudios/laravel-shape mallardduck/blade-lucide-icons
 ```
 
-The set is a separate package on purpose rather than a dependency of Shape's, so it stays yours
-to swap or remove. See [Icons](docs/icons.md) for what else fits there.
+Icons are published into your application rather than resolved on every render, so publish the
+ones you use:
+
+```bash
+php artisan shape:icon check close chevron-down
+```
+
+The set stays a package you own — swap or remove it with plain Composer, and re-publish. See
+[Icons](docs/icons.md) for sets, semantic names, and the full command.
+
+Composer will also pull in [Blaze](https://github.com/livewire/blaze), which compiles Shape's
+components into plain PHP functions instead of routing them through Blade's component
+pipeline. Unlike the icon set it is a real dependency, because the shipped views carry the
+`@blaze` directive and Blade renders an unregistered directive as literal text. Nothing about
+using Shape changes. See [Performance](docs/components.md#performance).
 
 Shape requires **Tailwind CSS v4.1** or newer. Import the package's theme in your application
 stylesheet:
@@ -52,6 +65,13 @@ php artisan vendor:publish --tag="shape-lang"
 php artisan vendor:publish --tag="shape-css"
 ```
 
+`shape-icons` is deliberately not part of the `shape` bundle — it takes copies of the icons
+Shape's own components render, which you only want if you mean to override them.
+
+```bash
+php artisan vendor:publish --tag="shape-icons"
+```
+
 ## Usage
 
 Shape components are available in your Blade views through the `shape:` tag prefix:
@@ -74,7 +94,7 @@ if that's the wrong starting point for your application.
 
 - [Theming](docs/theming.md) — colour roles, surface tokens, adding a role, dark mode
 - [Components](docs/components.md) — the `shape:` prefix and the button's props
-- [Icons](docs/icons.md) — icon sets, semantic names, accessibility, set size
+- [Icons](docs/icons.md) — publishing icons, sets, semantic names, accessibility, set size
 - [Configuration](docs/configuration.md) — component defaults in `config/shape.php`
 - [Style Guide](docs/STYLE_GUIDE.md) — the design guidance the components are built to
 

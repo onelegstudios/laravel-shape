@@ -18,15 +18,14 @@ php artisan vendor:publish --tag="shape-config"
         'size' => 'md',
     ],
 
-    'icon' => [
-        'size' => 'md',
-    ],
-
 ],
 ```
 
-The icon has no `color` default on purpose. Every other styling prop names a value; this one's
-default is to name nothing, so the icon inherits. See [Icons](icons.md).
+The icon takes no defaults from here. It renders published components, and folding those away
+at compile time is only safe while the component reads nothing global — a `size` read from
+config would be frozen into every compiled view the first time it rendered. Its size scale lives
+in the component with `md` as a literal default, and a call site that wants another rung names
+it. See [Icons](icons.md).
 
 With that, `<shape:button>Save</shape:button>` renders a solid primary button, and a call site
 that names a prop still wins — config moves the starting point rather than taking the choice
@@ -39,5 +38,7 @@ key is therefore safe but not neutral: the prop falls back to Shape's own defaul
 
 ## Icons
 
-The `icons` block — which library a set name points at, and the semantic aliases Shape's own
-components render through — is documented with the component: [Icons](icons.md).
+The `icons` block — where published icons live, which library a set name points at, and the
+semantic aliases Shape's own components render through — is read by `shape:icon` when you
+publish an icon rather than on every render. It is documented with the component:
+[Icons](icons.md).

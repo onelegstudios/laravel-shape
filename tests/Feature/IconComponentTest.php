@@ -3,74 +3,59 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\File;
 use Illuminate\View\ViewException;
+use Onelegstudios\Shape\Tests\TestCase;
 
-it('renders an svg from the configured default set', function () {
-    $html = Blade::render('<shape:icon name="check" />');
+// The component renders published icons rather than reading SVGs itself, so the
+// icons these tests need have to exist first. Name resolution -- aliases, set
+// prefixes, the artwork -- is the command's job now and is covered against the
+// command; what is left here is what the component still does: size, colour,
+// accessibility, and passing the caller's attributes through.
+beforeEach(function () {
+    File::deleteDirectory(TestCase::iconPath());
 
-    expect($html)
+    $this->artisan('shape:icon', ['name' => ['check', 'close'], '--no-clear' => true])->run();
+
+    config()->set('shape.icons.sets', ['fixture' => 'fixture']);
+
+    $this->artisan('shape:icon', [
+        'name' => ['check', 'cross'],
+        '--set' => 'fixture',
+        '--no-clear' => true,
+    ])->run();
+});
+
+afterEach(function () {
+    File::deleteDirectory(TestCase::iconPath());
+});
+
+it('renders a published icon from the default set', function () {
+    expect(Blade::render('<shape:icon name="check" />'))
         ->toContain('<svg')
         ->toContain('stroke="currentColor"');
 });
 
-it('resolves a set name through config rather than hard-coding a library', function () {
-    // The point of the indirection: the call site names a set, config decides
-    // which library that is. Nothing in the markup mentions Lucide or the fixture.
-    config()->set('shape.icons.sets', ['glyph' => 'fixture']);
-
-    expect(Blade::render('<shape:icon name="cross" set="glyph" />'))
+it('renders from a named set', function () {
+    expect(Blade::render('<shape:icon name="cross" set="fixture" />'))
         ->toContain('data-fixture="cross"');
 });
 
-it('moves every unnamed call site at once when the default set changes', function () {
-    // The payoff. One config edit repoints an application from one icon library
-    // to another without a single view being touched.
-    config()->set('shape.icons.set', 'fixture');
+it('fails loudly, naming the component it looked for, when an icon is not published', function () {
+    // The whole point of dropping the runtime lookup: a name that was never
+    // published fails the first time the page is loaded, in development, the same
+    // way any other typo'd Blade component does -- rather than at runtime in
+    // production, or silently from the wrong set.
+    Blade::render('<shape:icon name="never-published" />');
+})->throws(ViewException::class, 'shape-icon::default.never-published');
 
-    expect(Blade::render('<shape:icon name="check" />'))
-        ->toContain('data-fixture="check"');
-});
-
-it('passes an unmapped set name through as a prefix', function () {
-    // A set that is not registered in config is already a prefix, so using it
-    // ad hoc works. Falling back to the default set instead would answer a request
-    // for one library with an icon from another and call it success.
-    expect(Blade::render('<shape:icon name="check" set="fixture" />'))
-        ->toContain('data-fixture="check"');
-});
-
-it('raises the underlying error for a set that does not exist', function () {
-    // Which is what makes passing an unmapped name through safe: a typo is loud,
-    // and names the prefix that was tried, rather than being silently served from
-    // the default set. Blade wraps what the view threw, so the assertion is on the
-    // message -- SvgNotFound arrives as the previous exception.
-    Blade::render('<shape:icon name="check" set="lucidee" />');
-})->throws(ViewException::class, 'lucidee-check');
-
-it('resolves a semantic alias to the name the set actually uses', function () {
-    // Shape's own components ask for `close`; Lucide calls that icon `x`. Neither
-    // the component nor the call site needs to know which.
-    config()->set('shape.icons.aliases', ['close' => 'cross']);
-    config()->set('shape.icons.set', 'fixture');
-
-    expect(Blade::render('<shape:icon name="close" />'))
-        ->toContain('data-fixture="cross"');
-});
-
-it('leaves a name with no alias untouched', function () {
-    // Aliases are a small table for the icons Shape renders itself, not a second
-    // vocabulary every call site has to be taught.
-    config()->set('shape.icons.aliases', ['close' => 'cross']);
-    config()->set('shape.icons.set', 'fixture');
-
-    expect(Blade::render('<shape:icon name="check" />'))
-        ->toContain('data-fixture="check"');
+it('escapes an ampersand written plainly in a label', function () {
+    expect(Blade::render('<shape:icon name="check" label="Rock & Roll" />'))
+        ->toContain('aria-label="Rock &amp; Roll"');
 });
 
 it('renders each rung of the size scale differently', function (string $size, string $expected) {
-    $html = Blade::render('<shape:icon name="check" size="'.$size.'" />');
-
-    expect($html)->toContain($expected);
+    expect(Blade::render('<shape:icon name="check" size="'.$size.'" />'))->toContain($expected);
 })->with([
     'xs matches a table row' => ['xs', 'size-3.5'],
     'sm matches a toolbar' => ['sm', 'size-4'],
@@ -124,17 +109,16 @@ it('falls back to inheriting when the colour is not shaped like a CSS identifier
 ]);
 
 it('hides a decorative icon from assistive technology by default', function () {
-    // Most icons repeat a label that is already beside them, so announcing them
-    // is noise.
     expect(Blade::render('<shape:icon name="check" />'))
         ->toContain('aria-hidden="true"')
         ->not->toContain('role="img"');
 });
 
 it('announces an icon that is the only content', function () {
-    $html = Blade::render('<shape:icon name="check" label="Saved" />');
-
-    expect($html)
+    // Which is why the published icon sets no accessibility of its own: `merge`
+    // can add an attribute but never remove one, so an icon that hid itself could
+    // not be unhidden from here.
+    expect(Blade::render('<shape:icon name="check" label="Saved" />'))
         ->toContain('role="img"')
         ->toContain('aria-label="Saved"')
         ->not->toContain('aria-hidden');
@@ -151,11 +135,7 @@ it('lets a call site override the accessibility default', function () {
 });
 
 it('merges consumer classes without losing the size', function () {
-    // Blade Icons drops its own class argument once the attribute bag carries a
-    // class, so a caller nudging the alignment could silently unsize the icon.
-    $html = Blade::render('<shape:icon name="check" class="-ml-0.5" />');
-
-    expect($html)
+    expect(Blade::render('<shape:icon name="check" class="-ml-0.5" />'))
         ->toContain('size-5')
         ->toContain('-ml-0.5');
 });
@@ -166,56 +146,32 @@ it('forwards arbitrary attributes to the svg', function () {
 });
 
 it('does not leak the resolution props onto the rendered svg', function () {
-    $html = Blade::render('<shape:icon name="check" set="lucide" size="lg" color="info" label="Done" />');
+    $html = Blade::render('<shape:icon name="check" set="fixture" size="lg" color="info" label="Done" />');
 
     // Leading spaces matter here: `aria-label="Done"` legitimately contains
     // `label="Done"`, and the assertion is about the prop being forwarded verbatim.
     expect($html)
         ->not->toContain(' name="check"')
-        ->not->toContain(' set="lucide"')
+        ->not->toContain(' set="fixture"')
         ->not->toContain(' size="lg"')
         ->not->toContain(' color="info"')
         ->not->toContain(' label="Done"');
 });
 
-it('takes the value of every unnamed prop from config', function () {
-    config()->set('shape.components.icon', ['size' => 'lg']);
-
-    expect(Blade::render('<shape:icon name="check" />'))
-        ->toBe(Blade::render('<shape:icon name="check" size="lg" />'));
+it('folds a static call site away entirely', function () {
+    // The reason the component reads no config: with nothing global left, a call
+    // site that names its icon leaves no component behind at all.
+    expect(Blade::compileString('<shape:icon name="check" size="sm" />'))
+        ->toContain('[BlazeFolded]')
+        ->toContain('<svg')
+        ->toContain('size-4');
 });
 
-it('lets a call site override the configured default', function () {
-    config()->set('shape.components.icon', ['size' => 'lg']);
+it('still renders a dynamic name, by declining to fold', function () {
+    // A dynamic name cannot be resolved at compile time, so Blaze falls back to
+    // the function compiler. That is a smaller win, not a failure.
+    expect(Blade::compileString('<shape:icon :name="$n" />'))
+        ->not->toContain('[BlazeFolded]');
 
-    expect(Blade::render('<shape:icon name="check" size="xs" />'))
-        ->toContain('size-3.5');
+    expect(Blade::render('<shape:icon :name="$n" />', ['n' => 'check']))->toContain('<svg');
 });
-
-it('ships config defaults that match the fallbacks baked into the component', function () {
-    // Two copies of one fact drift. Rendering with the shipped config and then
-    // with none at all has to come out identical.
-    $configured = Blade::render('<shape:icon name="check" />');
-
-    config()->set('shape.components.icon', null);
-    config()->set('shape.icons', null);
-
-    expect(Blade::render('<shape:icon name="check" />'))->toBe($configured);
-});
-
-it('falls back to a packaged default rather than rendering an unsized icon', function (mixed $components, mixed $icons) {
-    // Laravel merges package config one level deep, so a published file that has
-    // gone stale is not a hypothetical: drop a key and nothing restores it.
-    config()->set('shape.components.icon', $components);
-    config()->set('shape.icons', $icons);
-
-    expect(Blade::render('<shape:icon name="check" />'))
-        ->toContain('size-5')
-        ->toContain('<svg');
-})->with([
-    'both blocks removed' => [null, null],
-    'empty blocks' => [[], []],
-    'blocks missing every key' => [['unrelated' => 'value'], ['unrelated' => 'value']],
-    'values of the wrong type' => [['size' => ['lg']], ['set' => ['lucide'], 'sets' => 'lucide', 'aliases' => 3]],
-    'blocks that are not arrays' => ['lg', 'lucide'],
-]);

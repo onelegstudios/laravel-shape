@@ -1,3 +1,17 @@
+@blaze
+
+{{-- Blaze compiles this template into a plain PHP function and calls it directly,
+     skipping Blade's component pipeline. That is the whole optimisation here, and
+     it has to be: the two stronger strategies both disqualify themselves. `memo`
+     caches rendered output per call-site signature but only applies to components
+     without slots, and a button is mostly slot. `fold` bakes the result into the
+     calling template at compile time, which cannot survive the `config()` reads
+     below -- an application's published defaults would stop being read the moment
+     a view was compiled, which is the one promise this component makes.
+
+     The directive has to be the first thing in the file: Blaze looks for it with
+     an anchored match, so a comment above it reads as no directive at all. --}}
+
 @props([
     'variant' => null,
     'color' => null,

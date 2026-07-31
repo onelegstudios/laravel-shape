@@ -26,15 +26,12 @@ return [
             'size' => 'md',
         ],
 
-        // The icon has no `color` default on purpose. Every other styling prop
-        // names a value; this one's default is to name nothing, so the icon
-        // inherits `currentColor` from whatever it sits inside. An icon in a solid
-        // danger button has to come out the button's colour, and any default here
-        // -- even `neutral` -- would break that everywhere to serve the rarer
-        // standalone case, which can just say `color="danger"`.
-        'icon' => [
-            'size' => 'md',
-        ],
+        // The icon takes no defaults from here. It renders published components,
+        // and folding those away at compile time is only safe while the component
+        // reads nothing global -- a `size` default read from config would be
+        // frozen into every compiled view the first time it rendered. The size
+        // scale lives in the component with `md` as a literal default; a call
+        // site that wants another rung names it.
 
     ],
 
@@ -48,6 +45,17 @@ return [
     // ordinary `composer remove` instead of a fight with a dependency it cannot
     // reach.
     'icons' => [
+
+        // Where `shape:icon` writes published icons, and the first place the
+        // "shape-icons" view namespace looks. Icons published here shadow the
+        // ones the package ships by filename, so overriding one is a matter of
+        // publishing it under the same name.
+        //
+        // Null keeps the default, resource_path('views/vendor/shape-icons'),
+        // which is resolved when it is used rather than here -- a package config
+        // file is merged before the application has finished booting, and naming
+        // a path this early is how you get one built from the wrong base.
+        'path' => null,
 
         // The set an <shape:icon> uses when the call site does not name one.
         'set' => 'lucide',

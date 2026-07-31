@@ -5,6 +5,7 @@
 /.gitignore         export-ignore
 /.editorconfig      export-ignore
 /tests              export-ignore
+/benchmarks         export-ignore
 /phpunit.xml.dist   export-ignore
 /phpstan.neon.dist  export-ignore
 /pint.json          export-ignore
