@@ -24,8 +24,8 @@ what lets [Blaze](https://github.com/livewire/blaze) fold an icon away entirely,
 saving available, and it is why the indirection moved to publish time instead of being dropped.
 
 [Blade Icons](https://github.com/blade-ui-kit/blade-icons) still does the reading, and its
-ecosystem of sets is still what you install — but only `shape:icon:add` talks to it. Once an icon
-is published, the set package is no longer on the render path at all.
+ecosystem of sets is still what you install — but only `shape:icon:add` and `shape:icon:update`
+talk to it. Once an icon is published, the set package is no longer on the render path at all.
 
 ## The Icon Commands
 
@@ -35,6 +35,12 @@ them:
 ```bash
 php artisan shape:icon
 ```
+
+| Command | What it does |
+| --- | --- |
+| `shape:icon:add` | Publish icons from an installed set. Never overwrites. |
+| `shape:icon:update` | Rewrite published icons from the set as it stands now. |
+| `shape:icon:remove` | Take published icons back out. |
 
 They are separate names rather than one command taking an action argument because icon names and
 action names are the same vocabulary — `check`, `plus` and `x` are all icons in some set — so
@@ -60,7 +66,8 @@ php artisan shape:icon:add check --no-clear         # leave compiled views alone
 **Adding never overwrites.** An icon that is already published is reported and left exactly as it
 is, so re-running the command to pick up one more name is always safe and can never undo an edit
 you made by hand — there is no flag here that says otherwise. Naming ten icons when nine are
-already there adds the tenth and warns about the nine.
+already there adds the tenth and warns about the nine. Refreshing one against an upgraded set is
+[`shape:icon:update`](#updating-icons), where overwriting is the thing you asked for by name.
 
 Publishing clears your compiled views, and it has to: folding copies an icon's markup into every
 compiled view that renders it, and editing the published file does not invalidate those. Without
@@ -154,6 +161,60 @@ comes first when more than one set has icons in it — and it lists sets by what
 not by what is configured, which is what lets you clean up after a library you have already
 uninstalled.
 
+## Updating Icons
+
+```bash
+php artisan shape:icon:update check                  # one icon
+php artisan shape:icon:update check close            # several at once
+php artisan shape:icon:update check --set=solid      # in a particular set
+php artisan shape:icon:update --all                  # everything published in the set
+php artisan shape:icon:update --all --force          # ...without being asked first
+php artisan shape:icon:update                        # pick them interactively
+```
+
+| Option | What it does |
+| --- | --- |
+| `--set=` | Which published set to refresh. Defaults to the only one, or to `icons.set`. |
+| `--all` | Refresh every icon published in the set, instead of naming them. |
+| `--force` | Answer the `--all` confirmation, for runs with nobody to ask. |
+| `--no-clear` | Skip the compiled-view clear, for scripting many updates before one clear. |
+
+**Updating overwrites — that is the whole verb.** Naming an icon is the confirmation, the same
+bargain removing makes, and a file you edited by hand is rewritten like any other. `--all` is the
+exception, because it is the form where a mistake costs every edit in the set at once: it asks
+first, and a scripted sweep must pass `--force` rather than let an unanswerable prompt fall back
+to its default.
+
+**It resolves through config, not through the file.** The header a published icon carries is
+documentation, not state. Names go through `icons.aliases` and `icons.sets` as they stand now,
+which is what makes this the verb that brings a published directory in line with configuration —
+repoint `close` from `x` to `x-mark` and re-run it, and that is the entire migration. The file it
+rewrites is still the one named `close.blade.php`: aliases decide what goes *inside*, never which
+file is addressed.
+
+**An icon that is already current is reported `unchanged` and not touched**, so mtimes stay
+honest and the compiled-view clear only happens when something actually moved. One exception you
+will meet once: icons published before this release carry an older header comment, so the first
+update rewrites them all even where the artwork is identical.
+
+**An icon the set no longer has is reported and skipped**, not fatal — a glyph renamed upstream
+should not abort a two-hundred-icon refresh. The message names the *resolved* name, which is the
+one to search for upstream:
+
+```
+lucide/close (lucide-x) ................................ missing from set
+```
+
+From there, either remove the icon or point its alias at the new name and update again.
+
+**Updating the default set fixes its forwards.** A missing `default/` forward is written, and one
+still pointing at a set you have moved away from is repointed here. That is the opposite of what
+removing does, and safe for a reason removing cannot claim: the artwork being pointed at was
+confirmed a moment ago, so the rewrite cannot leave a dangling forward behind.
+
+**`--all` means every icon you have published in the set** — the same as removing, the opposite
+of adding, which sweeps everything the set *contains*.
+
 ## Where They Land
 
 Icons are published into a directory per set:
@@ -229,6 +290,9 @@ The old set goes first because the artwork in it is now from a library you no lo
 adding leaves anything already published alone. `--set` still names it even though `sets` no
 longer does: removing works off what is on disk, which is the whole reason it can clean up after
 a package you have already uninstalled.
+
+This is a removal and an add rather than an [update](#updating-icons) because the set name
+changes, and with it the directory. Updating is for the same set after a package upgrade.
 
 No views change. The re-publish is the step that replaces the old find-and-replace, and it is
 the one thing this design asks of you that the runtime lookup did not.
@@ -365,24 +429,30 @@ not quietly make you the owner of icons the package would otherwise keep current
 ## Keeping Icons Current
 
 A published icon stops tracking the set it came from, which is the ordinary bargain for
-published assets and the one real cost here. After upgrading an icon package, remove the icons
-you want refreshed and add them again — adding on its own will report them and move on:
+published assets and the one real cost here. Updating is a step you run, not a subscription.
+After upgrading an icon package:
 
 ```bash
-php artisan shape:icon:remove check
-php artisan shape:icon:add check
+php artisan shape:icon:update check          # the ones you care about
+php artisan shape:icon:update --all --force  # or the whole set, in CI
 ```
 
-Refreshing is the two verbs in order rather than a `--force` on adding, for the same reason
-adding never overwrites: the flag that would make it convenient is the flag that would let a
-routine command quietly undo an edit you made by hand.
+[Updating](#updating-icons) is its own verb rather than a `--force` on adding, for the same
+reason adding never overwrites: the objection was never to overwriting, it was to the *routine*
+command being able to. Adding is what you re-run to pick up one more name, and a flag on it would
+put undoing a hand edit one keystroke from a command you run without thinking. A verb called
+`update` cannot be run by accident.
+
+It also replaced a recipe that had a real cost. Removing and then re-adding worked, but it
+deleted the file before anything had confirmed the replacement resolved at all — so a glyph the
+new package had renamed left you with nothing.
 
 Each published file records which set and which name it came from, so you can always tell what a
 given icon is:
 
 ```blade
-{{-- lucide-check -- published from set "lucide" by `php artisan shape:icon:add`.
-     Edits survive: publishing again reports this file and leaves it as it is. --}}
+{{-- lucide-check -- published from set "lucide" by Shape's icon commands.
+     Adding again leaves this file alone; `shape:icon:update` rewrites it. --}}
 ```
 
 ## A Word on Set Size
@@ -392,7 +462,7 @@ registers a Blade component for every icon in every set so that `<x-lucide-check
 means a directory scan and a couple of thousand component registrations per request.
 
 None of that is on Shape's render path any more: published icons are ordinary Blade files, and
-the set package is only consulted by `shape:icon:add`. If you don't write `<x-lucide-check />`-style
+the set package is only consulted when you publish. If you don't write `<x-lucide-check />`-style
 tags yourself, switch them off and both costs disappear:
 
 ```php

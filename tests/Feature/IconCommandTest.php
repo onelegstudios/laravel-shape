@@ -8,6 +8,7 @@ it('lists the icon commands', function () {
     $this->artisan('shape:icon')
         ->expectsOutputToContain('shape:icon:add')
         ->expectsOutputToContain('shape:icon:remove')
+        ->expectsOutputToContain('shape:icon:update')
         ->assertSuccessful();
 });
 

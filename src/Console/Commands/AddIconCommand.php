@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use Onelegstudios\Shape\Console\Commands\Concerns\InteractsWithPublishedIcons;
+use Onelegstudios\Shape\Console\Commands\Concerns\WritesIconComponents;
 
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\suggest;
@@ -28,7 +29,8 @@ use function Laravel\Prompts\suggest;
  * someone may have hand-tuned, and the command that puts icons there is the wrong
  * place to take them away again: an already-published name is reported and left
  * alone. Taking one away is `shape:icon:remove`, and refreshing one against an
- * upgraded set is the two verbs in order.
+ * upgraded set is `shape:icon:update` -- a verb you cannot run by accident, which
+ * is what lets this one keep refusing.
  *
  * Naming nothing at all asks instead of failing. That is the one case where the
  * command can be sure it has not been scripted, so it picks up the set and the
@@ -38,6 +40,7 @@ use function Laravel\Prompts\suggest;
 class AddIconCommand extends Command
 {
     use InteractsWithPublishedIcons;
+    use WritesIconComponents;
 
     /**
      * The command signature.
@@ -288,44 +291,6 @@ class AddIconCommand extends Command
         }
 
         return null;
-    }
-
-    /**
-     * Wrap raw SVG markup in a component that takes the caller's attributes.
-     */
-    private function component(string $contents, string $icon, string $set): string
-    {
-        // `shrink-0` and nothing else. An icon is a fixed glyph beside text that
-        // wraps, and flex will happily squash it into an ellipse to make room --
-        // but accessibility is left to the caller, because `merge` can only add
-        // an attribute. An icon that hid itself here could never be unhidden by a
-        // <shape:icon label="..."> above it.
-        $merge = "{{ \$attributes->merge(['class' => 'shrink-0']) }}";
-
-        $svg = Str::replaceFirst('<svg', '<svg '.$merge, $contents);
-
-        return <<<BLADE
-            @blaze(fold: true)
-
-            {{-- {$icon} -- published from set "{$set}" by `php artisan shape:icon:add`.
-                 Edits survive: publishing again reports this file and leaves it as it is. --}}
-
-            {$svg}
-
-            BLADE;
-    }
-
-    /**
-     * Build the default-set component that forwards to the real one.
-     */
-    private function forward(string $set, string $name): string
-    {
-        return <<<BLADE
-            {{-- Forwards to the configured default set. Written by `php artisan shape:icon:add`. --}}
-
-            <x-shape-icon::{$set}.{$name} {{ \$attributes }} />
-
-            BLADE;
     }
 
     /**

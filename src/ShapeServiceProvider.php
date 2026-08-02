@@ -10,6 +10,7 @@ use Onelegstudios\Shape\Console\Commands\AddIconCommand;
 use Onelegstudios\Shape\Console\Commands\IconCommand;
 use Onelegstudios\Shape\Console\Commands\RemoveIconCommand;
 use Onelegstudios\Shape\Console\Commands\ShapeCommand;
+use Onelegstudios\Shape\Console\Commands\UpdateIconCommand;
 
 class ShapeServiceProvider extends ServiceProvider
 {
@@ -80,6 +81,7 @@ class ShapeServiceProvider extends ServiceProvider
             IconCommand::class,
             RemoveIconCommand::class,
             ShapeCommand::class,
+            UpdateIconCommand::class,
         ]);
     }
 

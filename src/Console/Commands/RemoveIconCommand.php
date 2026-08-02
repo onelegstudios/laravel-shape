@@ -10,14 +10,15 @@ use Onelegstudios\Shape\Console\Commands\Concerns\InteractsWithPublishedIcons;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\multiselect;
-use function Laravel\Prompts\select;
 
 /**
  * Take published icons back out of the application.
  *
  * The other half of `shape:icon:add`, and the reason adding never overwrites:
  * with a verb that removes, the command that publishes has no business deleting.
- * Refreshing an icon against an upgraded set is these two in order.
+ * Refreshing an icon against an upgraded set is neither of these -- that is
+ * `shape:icon:update`, which rewrites in place rather than deleting artwork
+ * before anything has confirmed the replacement resolves.
  *
  * Everything here reads the published directory rather than the configured sets,
  * which is the one place this verb has to disagree with its counterpart. Adding
@@ -78,7 +79,12 @@ class RemoveIconCommand extends Command
             return self::SUCCESS;
         }
 
-        $set = $this->chosenSet($sets, $default, $asking);
+        $set = $this->chosenPublishedSet(
+            $sets,
+            $default,
+            $asking,
+            'Which set should these icons be removed from?',
+        );
 
         $available = $this->publishedIconsIn($files, $path, $set);
 
@@ -195,43 +201,6 @@ class RemoveIconCommand extends Command
     }
 
     /**
-     * Which set the icons should be removed from.
-     *
-     * A set is offered because it has files in it, not because it is configured:
-     * the case this exists for is the library you have just uninstalled, whose
-     * artwork is still sitting in `resources/views`. `--set` is still passed
-     * through as given, so a directory nothing knows about is reachable too.
-     *
-     * @param  array<int, string>  $sets
-     */
-    private function chosenSet(array $sets, string $default, bool $asking): string
-    {
-        $option = $this->option('set');
-
-        if (is_string($option) && $option !== '') {
-            return $option;
-        }
-
-        // One published set is not a choice, and it is the right answer even
-        // when it is not the configured default -- there is nowhere else the
-        // icons could be.
-        if (count($sets) === 1) {
-            return $sets[0];
-        }
-
-        if (! $asking) {
-            return $default;
-        }
-
-        return (string) select(
-            label: 'Which set should these icons be removed from?',
-            options: array_combine($sets, $sets),
-            default: in_array($default, $sets, true) ? $default : $sets[0],
-            hint: 'Only sets with published icons are listed.',
-        );
-    }
-
-    /**
      * Ask which of the published icons to remove.
      *
      * One list rather than the repeated question `add` asks, because the two are
@@ -273,68 +242,6 @@ class RemoveIconCommand extends Command
         }
 
         $files->delete($forward);
-    }
-
-    /**
-     * Every set with icons published in it.
-     *
-     * `default/` is not one: it holds forwards written alongside the real files
-     * and removed alongside them, so offering it would mean offering to break
-     * every `<shape:icon name="...">` while leaving the artwork behind.
-     *
-     * @return array<int, string>
-     */
-    private function publishedSets(Filesystem $files, string $path): array
-    {
-        if (! $files->isDirectory($path)) {
-            return [];
-        }
-
-        $sets = [];
-
-        foreach ($files->directories($path) as $directory) {
-            $name = basename($directory);
-
-            if ($name === 'default') {
-                continue;
-            }
-
-            $sets[] = $name;
-        }
-
-        sort($sets);
-
-        return $sets;
-    }
-
-    /**
-     * The icon names published under a set, as the files are actually named.
-     *
-     * @return array<int, string>
-     */
-    private function publishedIconsIn(Filesystem $files, string $path, string $set): array
-    {
-        $directory = $path.'/'.$set;
-
-        if (! $files->isDirectory($directory)) {
-            return [];
-        }
-
-        $names = [];
-
-        foreach ($files->files($directory) as $file) {
-            $name = $file->getFilename();
-
-            if (! str_ends_with($name, '.blade.php')) {
-                continue;
-            }
-
-            $names[] = substr($name, 0, -strlen('.blade.php'));
-        }
-
-        sort($names);
-
-        return $names;
     }
 
     /**
