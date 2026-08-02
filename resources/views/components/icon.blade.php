@@ -1,53 +1,33 @@
+@blaze(fold: true)
+
+{{-- An icon is the component a dense page repeats most, so it is the one worth
+     making foldable: with `fold: true` a static call site leaves no component
+     behind at all, just the SVG inline in the calling template.
+
+     That is only safe because nothing below touches global state. The set, the
+     alias table, and the artwork itself were all resolved by `shape:icon` when
+     the icon was published, so what is left here is arithmetic on the props: a
+     size class, a colour class, and an accessibility default. A `config()` call
+     anywhere in this file would freeze that config into every compiled view the
+     first time it rendered, which is why the size default below is a literal
+     rather than a lookup.
+
+     A dynamic `:name` is not an error, it just declines to fold: Blaze falls back
+     to the function compiler, which still skips Blade's component pipeline. --}}
+
 @props([
     'name' => '',
-    'set' => null,
-    'size' => null,
+    'set' => 'default',
+    'size' => 'md',
     'color' => null,
     'label' => null,
 ])
 
 @php
-    // Shape resolves names and styles the result; Blade Icons finds the file. That
-    // split is deliberate -- reading SVGs off disk, caching them, and registering
-    // directory sets are solved problems. What is left here is the part a component
-    // library is actually for: one name for an icon across sets, one size scale
-    // shared with the button, and an accessibility default that is right more often
-    // than not.
-    //
-    // Lucide is the set config points at, but Shape does not require it: the set
-    // stays a package the consumer owns, so swapping it is `composer remove` rather
-    // than a Composer trick to prune a dependency they cannot reach. Nothing below
-    // names it except as the fallback for a config file that has gone missing.
-    $defaults = array_filter((array) config('shape.components.icon'), 'is_string');
-    $size ??= $defaults['size'] ?? 'md';
-
-    $icons = (array) config('shape.icons');
-    $sets = array_filter((array) ($icons['sets'] ?? []), 'is_string');
-    $aliases = array_filter((array) ($icons['aliases'] ?? []), 'is_string');
-
-    $set ??= is_string($icons['set'] ?? null) ? $icons['set'] : 'lucide';
-
-    // Two lookups, both of which fall through rather than fail. An alias is a name
-    // Shape's own components use so they need not know which library is installed;
-    // a name with no alias is already an icon name and passes straight to the set.
-    //
-    // A set name that is not mapped is treated as a prefix as-is. That reads as
-    // sloppy next to the closed sets on the button, but the alternative -- falling
-    // back to the default set -- answers `set="heroicon-o"` with a Lucide icon and
-    // calls it success. Passing it through means an ad-hoc prefix works untouched
-    // and a genuine typo raises SvgNotFound naming the prefix that was tried.
-    $name = $aliases[$name] ?? $name;
-    $prefix = $sets[$set] ?? $set;
-    $icon = $prefix === '' ? $name : $prefix.'-'.$name;
-
     // The same four rungs as the button, so `<shape:icon size="sm">` inside a
     // `size="sm"` button is the obvious thing rather than a lookup table. The
     // values are optical, not proportional: 20px is the icon that sits beside
     // `text-sm` without crowding it, and 14px is what survives a table row.
-    //
-    // `shrink-0` is the one class here that is not about size. An icon is a fixed
-    // glyph next to text that wraps, and flex will happily squash it into an
-    // ellipse to make room for a long label.
     $sizes = [
         'xs' => 'size-3.5',
         'sm' => 'size-4',
@@ -61,12 +41,8 @@
     // lets it take the colour of whatever it sits inside. `color` is for the
     // standalone icon that carries meaning by itself -- a status tick in a table.
     //
-    // `on-tint` is the role's readable-text surface, the same token the button's
-    // quiet variants use, so a role a consumer defined works here the moment its
-    // tokens exist and is already covered by the safelist in shape.css. A value
-    // that is not shaped like a CSS identifier is dropped rather than substituted
-    // into a class name, and dropping it lands back on inherit, which is the
-    // default -- the same bargain the button makes, with a quieter floor.
+    // A value that is not shaped like a CSS identifier is dropped rather than
+    // substituted into a class name, which lands back on inherit -- the default.
     $tint = is_string($color) && preg_match('/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/', $color) === 1
         ? ' text-'.$color.'-on-tint'
         : '';
@@ -76,21 +52,33 @@
     // escape hatch for the icon that is the only content -- an icon-only button --
     // and it has to announce as an image to be read at all.
     //
-    // These go on before the caller's own attributes so an explicit aria-hidden or
-    // aria-label at the call site still wins.
+    // These are merged as defaults, so an explicit aria-hidden or aria-label at
+    // the call site still wins. The published icon deliberately sets no a11y of
+    // its own: `merge` can add an attribute but never take one away, so an icon
+    // that hid itself would leave `label` unable to unhide it.
     //
-    // Blade Icons renders attribute values as given, so escaping the label is this
-    // component's job -- without double-encoding, the way Laravel's own attribute
-    // bag does it, or a `&amp;` written in the markup would announce as "amp".
+    // The label is decoded rather than escaped, which looks backwards and is not.
+    // Dispatching through <x-dynamic-component> escapes attribute values exactly
+    // once on the way in, with double-encoding on, so a `&amp;` written at the
+    // call site would arrive as `&amp;amp;` and announce as "amp". Decoding first
+    // and letting that one hop do the escaping is `e($label, false)` spelled for
+    // the path the value actually takes: both a bare `&` and a written-out
+    // `&amp;` come out as one escaped ampersand, which is what the markup around
+    // this component would have done with the same text.
     $a11y = $label === null
         ? ['aria-hidden' => 'true']
-        : ['role' => 'img', 'aria-label' => e($label, false)];
+        : ['role' => 'img', 'aria-label' => html_entity_decode($label, ENT_QUOTES, 'UTF-8')];
 
-    // Classes are merged here rather than handed to svg() as its class argument:
-    // Blade Icons drops that argument entirely once the attribute bag carries a
-    // class of its own, so a caller adding `class="-ml-0.5"` would silently lose
-    // the size. Merging first means both survive, caller's classes last.
-    $attrs = $attributes->merge(['class' => $scale.$tint.' shrink-0'])->getAttributes();
+    // `shape-icon::` addresses the published icons, application copies first.
+    // `default` is a real directory rather than a config lookup: `shape:icon`
+    // writes one alongside the named set, forwarding to it, which is what keeps
+    // the configured default set out of this file.
+    $icon = 'shape-icon::'.$set.'.'.$name;
+
+    // Reassigned rather than kept in a second variable: Blade's tag compiler
+    // only treats the literal `{{ $attributes }}` as an attribute spread, and any
+    // other name lands on the element as a stray `attrs="attrs"`.
+    $attributes = $attributes->merge(array_merge(['class' => $scale.$tint], $a11y), escape: false);
 @endphp
 
-{{ svg($icon, '', array_merge($a11y, $attrs)) }}
+<x-dynamic-component :component="$icon" {{ $attributes }} />
