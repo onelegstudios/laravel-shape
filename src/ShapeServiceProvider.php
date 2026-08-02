@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Onelegstudios\Shape\Console\Commands\AddIconCommand;
 use Onelegstudios\Shape\Console\Commands\IconCommand;
+use Onelegstudios\Shape\Console\Commands\RemoveIconCommand;
 use Onelegstudios\Shape\Console\Commands\ShapeCommand;
 
 class ShapeServiceProvider extends ServiceProvider
@@ -77,6 +78,7 @@ class ShapeServiceProvider extends ServiceProvider
         $this->commands([
             AddIconCommand::class,
             IconCommand::class,
+            RemoveIconCommand::class,
             ShapeCommand::class,
         ]);
     }

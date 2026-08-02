@@ -7,6 +7,7 @@ use Symfony\Component\Console\Exception\InvalidArgumentException;
 it('lists the icon commands', function () {
     $this->artisan('shape:icon')
         ->expectsOutputToContain('shape:icon:add')
+        ->expectsOutputToContain('shape:icon:remove')
         ->assertSuccessful();
 });
 

@@ -102,6 +102,58 @@ This is the only mode that needs a terminal. `--no-interaction`, a redirected st
 on the command line all take the non-interactive path, so a scripted `shape:icon:add` with
 nothing to add still fails the way it always did rather than quietly adding nothing.
 
+## Removing Icons
+
+```bash
+php artisan shape:icon:remove check                  # one icon
+php artisan shape:icon:remove check close            # several at once
+php artisan shape:icon:remove check --set=solid      # from a particular set
+php artisan shape:icon:remove --all                  # everything published in the set
+php artisan shape:icon:remove --all --force          # ...without being asked first
+php artisan shape:icon:remove                        # pick them interactively
+```
+
+| Option | What it does |
+| --- | --- |
+| `--set=` | Which published set to remove from. Defaults to the only one, or to `icons.set`. |
+| `--all` | Remove every icon published in the set, instead of naming them. |
+| `--force` | Answer the `--all` confirmation, for runs with nobody to ask. |
+| `--no-clear` | Skip the compiled-view clear, for scripting many removals before one clear. |
+
+**Name the file, not the icon.** Aliases are not resolved here, because they were resolved when
+the icon was published: `shape:icon:add close` writes `close.blade.php`, so `shape:icon:remove
+close` is what takes it away. The name you remove is the name you see in the directory.
+
+Removing an icon takes its `default/` forward with it, and only that one — a forward pointing at
+a different set belongs to that set and goes when it does. A set directory left empty goes too,
+so what is on disk stays an honest answer to "which sets have I published?".
+
+A name that was never published is reported and skipped rather than failing the run, so removing
+ten icons when only nine are there is not an error. Naming an icon **is** the confirmation, though:
+a published file you edited by hand is removed like any other, because there is nothing else the
+command could reasonably think you meant.
+
+`--all` is the exception, since it is the one form where a typo costs the whole set:
+
+```
+php artisan shape:icon:remove --all
+
+ ┌ Remove all 24 published icon(s) from set [lucide]? ──────────┐
+ │ Yes / No                                                     │
+ └──────────────────────────────────────────────────────────────┘
+   They can be published again with `php artisan shape:icon:add`.
+```
+
+`--force` answers it. A scripted `--all` **must** pass `--force` and fails without it, rather than
+letting an unanswerable prompt fall back to its default and report success having removed nothing.
+
+Naming nothing asks which icons should go, as one list rather than the repeated question adding
+asks. The two are choosing from different things: a set holds two thousand names and can only be
+searched, where what you have published is short enough to read and check off. The set question
+comes first when more than one set has icons in it — and it lists sets by what is *published*,
+not by what is configured, which is what lets you clean up after a library you have already
+uninstalled.
+
 ## Where They Land
 
 Icons are published into a directory per set:
@@ -169,12 +221,14 @@ php artisan vendor:publish --tag="shape-config"
 ```
 
 ```bash
-rm -rf resources/views/vendor/shape-icons
+php artisan shape:icon:remove --all --set=lucide --force
 php artisan shape:icon:add --all
 ```
 
-The old directory goes first because the artwork in it is now from a library you no longer have,
-and adding leaves anything already published alone.
+The old set goes first because the artwork in it is now from a library you no longer have, and
+adding leaves anything already published alone. `--set` still names it even though `sets` no
+longer does: removing works off what is on disk, which is the whole reason it can clean up after
+a package you have already uninstalled.
 
 No views change. The re-publish is the step that replaces the old find-and-replace, and it is
 the one thing this design asks of you that the runtime lookup did not.
@@ -311,13 +365,17 @@ not quietly make you the owner of icons the package would otherwise keep current
 ## Keeping Icons Current
 
 A published icon stops tracking the set it came from, which is the ordinary bargain for
-published assets and the one real cost here. After upgrading an icon package, delete the icons
+published assets and the one real cost here. After upgrading an icon package, remove the icons
 you want refreshed and add them again — adding on its own will report them and move on:
 
 ```bash
-rm resources/views/vendor/shape-icons/lucide/check.blade.php
+php artisan shape:icon:remove check
 php artisan shape:icon:add check
 ```
+
+Refreshing is the two verbs in order rather than a `--force` on adding, for the same reason
+adding never overwrites: the flag that would make it convenient is the flag that would let a
+routine command quietly undo an edit you made by hand.
 
 Each published file records which set and which name it came from, so you can always tell what a
 given icon is:
