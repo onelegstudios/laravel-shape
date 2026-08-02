@@ -46,6 +46,14 @@ it('resolves a name through the alias table but keeps Shape\'s own name on the f
         ->and(File::get($this->iconPath.'/lucide/close.blade.php'))->toContain('lucide-x');
 });
 
+it('records a stamp in the file it writes', function () {
+    // What `shape:icon:check` reads back to tell a hand edit from a set that has
+    // moved. A published file with no stamp can only be compared on its artwork.
+    publishIcon(['name' => ['check']])->assertSuccessful();
+
+    expect(File::get($this->iconPath.'/lucide/check.blade.php'))->toMatch('/\n\s*stamp:[0-9a-f]{16} --\}\}\n/');
+});
+
 it('keeps same-named icons from two sets apart', function () {
     // The case a flat directory would lose: two sets, one name, both wanted.
     config()->set('shape.icons.sets', ['lucide' => 'lucide', 'fixture' => 'fixture']);

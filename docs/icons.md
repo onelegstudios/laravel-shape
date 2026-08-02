@@ -39,6 +39,7 @@ php artisan shape:icon
 | Command | What it does |
 | --- | --- |
 | `shape:icon:add` | Publish icons from an installed set. Never overwrites. |
+| `shape:icon:check` | Report which published icons are out of date or edited. Changes nothing. |
 | `shape:icon:update` | Rewrite published icons from the set as it stands now. |
 | `shape:icon:remove` | Take published icons back out. |
 
@@ -194,8 +195,9 @@ file is addressed.
 
 **An icon that is already current is reported `unchanged` and not touched**, so mtimes stay
 honest and the compiled-view clear only happens when something actually moved. One exception you
-will meet once: icons published before this release carry an older header comment, so the first
-update rewrites them all even where the artwork is identical.
+will meet once: icons published before this release carry an older header comment — they predate
+the [stamp](#checking-icons) — so the first update rewrites them all even where the artwork is
+identical.
 
 **An icon the set no longer has is reported and skipped**, not fatal — a glyph renamed upstream
 should not abort a two-hundred-icon refresh. The message names the *resolved* name, which is the
@@ -214,6 +216,74 @@ confirmed a moment ago, so the rewrite cannot leave a dangling forward behind.
 
 **`--all` means every icon you have published in the set** — the same as removing, the opposite
 of adding, which sweeps everything the set *contains*.
+
+## Checking Icons
+
+```bash
+php artisan shape:icon:check                     # everything published, in every set
+php artisan shape:icon:check check close         # just these
+php artisan shape:icon:check --set=solid         # just this set
+php artisan shape:icon:check --strict            # ...and fail the build if anything has drifted
+```
+
+| Option | What it does |
+| --- | --- |
+| `--set=` | Limit the report to one published set. Defaults to every set on disk. |
+| `--strict` | Exit non-zero when anything is not up to date, for a CI gate. |
+
+**It changes nothing.** That is the point of it: until this verb existed, the way to find out
+whether your icons were current was to run [`shape:icon:update`](#updating-icons) and read what it
+rewrote — an answer that costs you the hand edits it is reporting on.
+
+```
+php artisan shape:icon:check
+
+  lucide/check ............................................. up to date
+  lucide/close (lucide-x) .................................. update available
+  lucide/menu .............................................. edited
+  lucide/trash (lucide-trash) .............................. missing from set
+
+  INFO Checked 24 icon(s) in /app/resources/views/vendor/shape-icons.
+  INFO 21 up to date.
+  WARN 1 out of date. Run `php artisan shape:icon:update`.
+  WARN 1 edited by hand. Updating overwrites the edit.
+  WARN 1 icon(s) are no longer in their set. Remove them, or add them under their new names.
+```
+
+| Report | What it means |
+| --- | --- |
+| `up to date` | The file says exactly what the installed set says. |
+| `update available` | The set — or your config — now renders something else. |
+| `edited` | The file has been changed since it was published, and the set has not moved. |
+| `edited, update available` | Both. Updating takes the new artwork and loses the edit. |
+| `forward out of date` | The icon is current, but its `default/` forward is missing or names another set. |
+| `missing from set` | The name no longer resolves. Named with the resolved name, as updating does. |
+| `not published` | You asked about a name that no set on disk has. |
+
+**Telling an edit from an upgrade takes evidence**, because from the outside they are the same
+thing: bytes that differ from what the set renders now. So each published file carries a stamp,
+taken of the file at the moment it was written. A file that no longer matches its own stamp was
+edited here; a stamp that no longer matches a fresh render means the set moved. The two are
+independent, which is why `edited, update available` is a state this can name rather than guess at.
+
+Updating still does not read the stamp, and should not — it resolves through config and compares
+bytes, which is what makes it the verb that brings a directory in line with configuration. The
+stamp is there so that a command forbidden from fixing anything can explain what it found.
+
+**Icons published before the stamp existed are reported `(unstamped)`.** Their header is in the
+older format, so it cannot be compared, but the artwork below it still can: you get the right
+answer about whether they are out of date, and no answer about whether anyone edited them. One
+`shape:icon:update` gives them a stamp and the distinction comes back.
+
+**It checks every set, and never asks anything.** Its three siblings act, so narrowing them to one
+set is a safety property; this one only looks, and a status report covering one of three published
+directories is half an answer. Nothing is prompted for either — the run that needs this most is the
+one in CI with nobody at the terminal.
+
+**Drift is not failure.** A hand-edited icon is a choice somebody made, so the command succeeds and
+reports. `--strict` is the opt-in gate, and it fails on anything that is not `up to date` —
+including a name you asked about that was never published, since in a scripted check that is
+usually a stale list rather than a stale icon.
 
 ## Where They Land
 
@@ -433,9 +503,14 @@ published assets and the one real cost here. Updating is a step you run, not a s
 After upgrading an icon package:
 
 ```bash
+php artisan shape:icon:check                 # what moved, and what you changed yourself
 php artisan shape:icon:update check          # the ones you care about
 php artisan shape:icon:update --all --force  # or the whole set, in CI
 ```
+
+[Check](#checking-icons) first, and especially before the sweeping form: it is the one command here
+that tells you which files you have edited by hand, which are exactly the ones `--all` is about to
+overwrite. In a build that should never drift, `shape:icon:check --strict` is the gate.
 
 [Updating](#updating-icons) is its own verb rather than a `--force` on adding, for the same
 reason adding never overwrites: the objection was never to overwriting, it was to the *routine*
@@ -452,8 +527,14 @@ given icon is:
 
 ```blade
 {{-- lucide-check -- published from set "lucide" by Shape's icon commands.
-     Adding again leaves this file alone; `shape:icon:update` rewrites it. --}}
+     Adding again leaves this file alone; `shape:icon:update` rewrites it.
+     stamp:3f9a1c2d5e7b0148 --}}
 ```
+
+The stamp is a digest of the file as it was written, and the only part of that header anything
+reads back: it is what lets [`shape:icon:check`](#checking-icons) tell an icon you edited from one
+the set has moved under. Editing the artwork without editing the stamp is what you want — that is
+how the edit gets noticed. Nothing else consults the header, which stays documentation.
 
 ## A Word on Set Size
 

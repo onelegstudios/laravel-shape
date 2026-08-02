@@ -72,6 +72,26 @@ it('rewrites the file from what the name resolves to now', function () {
         ->not->toContain('data-fixture="check"');
 });
 
+it('records a stamp for the artwork it just wrote', function () {
+    // Not the one the file had. A stamp left behind by the previous artwork
+    // would make `shape:icon:check` report a file it had just refreshed as
+    // edited, for as long as it sat there.
+    usingFixtures();
+
+    seedIcon(['name' => ['mark']])->assertSuccessful();
+
+    $before = File::get($this->iconPath.'/fixture/mark.blade.php');
+
+    config()->set('shape.icons.aliases', ['mark' => 'cross']);
+
+    updateIcon(['name' => ['mark']])->assertSuccessful();
+
+    $after = File::get($this->iconPath.'/fixture/mark.blade.php');
+
+    expect($after)->toMatch('/\n\s*stamp:[0-9a-f]{16} --\}\}\n/')
+        ->and($after)->not->toBe($before);
+});
+
 it('keeps the set directory and the file name when the artwork changes', function () {
     // The file is addressed the way `remove` addresses one -- by the name it was
     // published under -- and only its contents come from the alias table.
