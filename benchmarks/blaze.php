@@ -281,7 +281,7 @@ function publishGalleryIcons(string $markup): void
         return;
     }
 
-    if (Artisan::call('shape:icon', ['name' => $names, '--force' => true]) !== 0) {
+    if (Artisan::call('shape:icon:add', ['name' => $names]) !== 0) {
         fwrite(STDERR, "Could not publish the gallery's icons:\n".Artisan::output());
         exit(1);
     }

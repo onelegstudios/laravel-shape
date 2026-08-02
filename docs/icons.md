@@ -5,7 +5,7 @@ publish the icons you use, and write them the same way you always would:
 
 ```bash
 composer require mallardduck/blade-lucide-icons
-php artisan shape:icon check close chevron-down
+php artisan shape:icon:add check close chevron-down
 ```
 
 ```blade
@@ -24,34 +24,83 @@ what lets [Blaze](https://github.com/livewire/blaze) fold an icon away entirely,
 saving available, and it is why the indirection moved to publish time instead of being dropped.
 
 [Blade Icons](https://github.com/blade-ui-kit/blade-icons) still does the reading, and its
-ecosystem of sets is still what you install — but only `shape:icon` talks to it. Once an icon
+ecosystem of sets is still what you install — but only `shape:icon:add` talks to it. Once an icon
 is published, the set package is no longer on the render path at all.
 
-## Publishing Icons
+## The Icon Commands
+
+Each thing you do to your published icons is its own command, and `shape:icon` on its own lists
+them:
 
 ```bash
-php artisan shape:icon check                    # one icon from the default set
-php artisan shape:icon check close settings     # several at once
-php artisan shape:icon check --set=solid        # from a set you configured
-php artisan shape:icon --all                    # everything the set contains
-php artisan shape:icon check --force            # overwrite what is already there
-php artisan shape:icon check --no-clear         # leave compiled views alone
+php artisan shape:icon
+```
+
+They are separate names rather than one command taking an action argument because icon names and
+action names are the same vocabulary — `check`, `plus` and `x` are all icons in some set — so
+`shape:icon check` could never mean one thing reliably.
+
+## Adding Icons
+
+```bash
+php artisan shape:icon:add check                    # one icon from the default set
+php artisan shape:icon:add check close settings     # several at once
+php artisan shape:icon:add check --set=solid        # from a set you configured
+php artisan shape:icon:add --all                    # everything the set contains
+php artisan shape:icon:add                          # pick them interactively
+php artisan shape:icon:add check --no-clear         # leave compiled views alone
 ```
 
 | Option | What it does |
 | --- | --- |
 | `--set=` | Which configured set to take the icons from. Defaults to `icons.set`. |
 | `--all` | Publish every icon the set contains, instead of naming them. |
-| `--force` | Overwrite icons that are already published. Without it they are skipped. |
 | `--no-clear` | Skip the compiled-view clear, for scripting many publishes before one clear. |
 
-An icon that is already published is skipped rather than overwritten, so re-running the command
-to add one more is safe and will not undo an edit you made by hand.
+**Adding never overwrites.** An icon that is already published is reported and left exactly as it
+is, so re-running the command to pick up one more name is always safe and can never undo an edit
+you made by hand — there is no flag here that says otherwise. Naming ten icons when nine are
+already there adds the tenth and warns about the nine.
 
 Publishing clears your compiled views, and it has to: folding copies an icon's markup into every
 compiled view that renders it, and editing the published file does not invalidate those. Without
 the clear a re-published icon keeps serving the old artwork. `--no-clear` is there for the script
 that publishes fifty icons and would rather clear once at the end.
+
+## Picking Icons Interactively
+
+Naming no icons at all asks instead of failing:
+
+```
+php artisan shape:icon:add
+
+ ┌ Which set should these icons come from? ─────────────────────┐
+ │ › outline (heroicon-o)                                       │
+ │   solid (heroicon-s)                                         │
+ └──────────────────────────────────────────────────────────────┘
+   Configured in config/shape.php under icons.sets.
+
+ ┌ Which icon? ─────────────────────────────────────────────────┐
+ │ chev                                                         │
+ ├──────────────────────────────────────────────────────────────┤
+ │ › chevron-down                                               │
+ │   chevron-left                                               │
+ └──────────────────────────────────────────────────────────────┘
+   2 queued. Leave empty to finish.
+```
+
+The set question only appears once `icons.sets` holds more than one entry, and never when
+`--set` already answered it. The icon question repeats until you answer it with an empty line,
+and completes against everything the set actually holds — plus your [semantic
+names](#semantic-names), since `close` is as valid an answer here as `x` and is the name the
+published file will get.
+
+A name the set does not have is rejected at the prompt rather than at the end, so a typo costs
+one answer instead of the session.
+
+This is the only mode that needs a terminal. `--no-interaction`, a redirected stdin, or a name
+on the command line all take the non-interactive path, so a scripted `shape:icon:add` with
+nothing to add still fails the way it always did rather than quietly adding nothing.
 
 ## Where They Land
 
@@ -120,8 +169,12 @@ php artisan vendor:publish --tag="shape-config"
 ```
 
 ```bash
-php artisan shape:icon --all --force
+rm -rf resources/views/vendor/shape-icons
+php artisan shape:icon:add --all
 ```
+
+The old directory goes first because the artwork in it is now from a library you no longer have,
+and adding leaves anything already published alone.
 
 No views change. The re-publish is the step that replaces the old find-and-replace, and it is
 the one thing this design asks of you that the runtime lookup did not.
@@ -171,7 +224,7 @@ library you installed. They ask for `close`, and `config/shape.php` maps it:
 ```
 
 Aliases resolve when an icon is published, and the file is named for what your views ask for
-rather than what the set calls it: `php artisan shape:icon close` writes `close.blade.php`
+rather than what the set calls it: `php artisan shape:icon:add close` writes `close.blade.php`
 holding Lucide's `x`. Swapping libraries is remapping these few names and re-publishing; no call
 site moves.
 
@@ -258,19 +311,20 @@ not quietly make you the owner of icons the package would otherwise keep current
 ## Keeping Icons Current
 
 A published icon stops tracking the set it came from, which is the ordinary bargain for
-published assets and the one real cost here. After upgrading an icon package, re-publish to pick
-up redrawn artwork:
+published assets and the one real cost here. After upgrading an icon package, delete the icons
+you want refreshed and add them again — adding on its own will report them and move on:
 
 ```bash
-php artisan shape:icon --all --force
+rm resources/views/vendor/shape-icons/lucide/check.blade.php
+php artisan shape:icon:add check
 ```
 
 Each published file records which set and which name it came from, so you can always tell what a
 given icon is:
 
 ```blade
-{{-- lucide-check -- published from set "lucide" by `php artisan shape:icon`.
-     Re-run with --force to pick up redrawn artwork after a set upgrade. --}}
+{{-- lucide-check -- published from set "lucide" by `php artisan shape:icon:add`.
+     Edits survive: publishing again reports this file and leaves it as it is. --}}
 ```
 
 ## A Word on Set Size
@@ -280,7 +334,7 @@ registers a Blade component for every icon in every set so that `<x-lucide-check
 means a directory scan and a couple of thousand component registrations per request.
 
 None of that is on Shape's render path any more: published icons are ordinary Blade files, and
-the set package is only consulted by `shape:icon`. If you don't write `<x-lucide-check />`-style
+the set package is only consulted by `shape:icon:add`. If you don't write `<x-lucide-check />`-style
 tags yourself, switch them off and both costs disappear:
 
 ```php
@@ -296,5 +350,5 @@ general. `@svg('lucide-check')` and `<x-icon name="lucide-check" />` keep workin
 
 Because nothing reads the set at runtime, you can also move it to `require-dev` and keep it out
 of production entirely. Weigh that against the fact that it becomes a build-time dependency:
-anyone who runs `shape:icon` needs it installed, and `composer install --no-dev` on a machine
+anyone who runs `shape:icon:add` needs it installed, and `composer install --no-dev` on a machine
 that publishes icons will not have it.

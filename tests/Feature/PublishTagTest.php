@@ -44,7 +44,7 @@ it('publishes the translations under the shape tag', function () {
 
 it('publishes the packaged icons under their own tag, outside the shape bundle', function () {
     // Not in the "shape" bundle on purpose: publishing an icon is what
-    // `shape:icon` is for, and a consumer who publishes every resource at once
+    // `shape:icon:add` is for, and a consumer who publishes every resource at once
     // should not silently take ownership of the icons Shape renders itself.
     $paths = publishDestinations('shape-icons');
 

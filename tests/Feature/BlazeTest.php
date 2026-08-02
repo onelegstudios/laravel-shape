@@ -20,7 +20,7 @@ use Onelegstudios\Shape\Tests\TestCase;
 beforeEach(function () {
     File::deleteDirectory(TestCase::iconPath());
 
-    $this->artisan('shape:icon', ['name' => ['check'], '--no-clear' => true])->run();
+    $this->artisan('shape:icon:add', ['name' => ['check'], '--no-clear' => true])->run();
 });
 
 afterEach(function () {
