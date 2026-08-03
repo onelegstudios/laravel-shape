@@ -45,6 +45,28 @@ abstract class TestCase extends Orchestra
     }
 
     /**
+     * Where this process caches the compiled service manifest.
+     *
+     * The third shared file in the skeleton to need splitting, and the only one
+     * the framework writes on its own. `bootstrap/cache/services.php` does not
+     * exist when a run starts -- `package:discover` writes `packages.php`, which
+     * is a different file -- so every worker compiles it at once and every worker
+     * renames a temp file over it. POSIX replaces a file another process holds
+     * open; Windows refuses, and Filesystem::replace() does not catch it, so a
+     * worker that loses the race dies inside whichever test happened to boot it.
+     *
+     * Relative on purpose. Application::normalizeCachePath() counts only "/" and
+     * "\" as absolute prefixes, so a Windows temp path like C:\Users\... would be
+     * joined onto the base path rather than replacing it. A relative value lands
+     * under the skeleton on both platforms, in the directory already holding the
+     * file it replaces.
+     */
+    public static function servicesCachePath(): string
+    {
+        return 'bootstrap/cache/services-'.self::worker().'.php';
+    }
+
+    /**
      * Where this process publishes configuration.
      *
      * `shape:install` can publish `config/shape.php`, and the skeleton's config
