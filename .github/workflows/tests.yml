@@ -17,9 +17,29 @@ concurrency:
 jobs:
   # Declared first so it is queued first: the Windows runner is the slowest job
   # in the workflow, so starting it ahead of the Linux matrix keeps it off the
-  # critical path. The package itself has no Windows-specific surface, but
-  # blade-icons scans the filesystem to build its manifest, so keep the
-  # configuration a fresh install would produce covered.
+  # critical path.
+  #
+  # What it covers is the shape:icon:* commands, which do their own filesystem
+  # work and are the only part of the package that can pass on Linux and fail
+  # here. Two things in particular. Separators: a set's paths come from its own
+  # __DIR__, so they arrive backslashed on Windows, and AddIconCommand globs
+  # under them and then strips the same prefix back off each result -- if glob
+  # hands back the other separator, every name comes out as an absolute path
+  # and --all silently publishes nonsense. And line endings: update's unchanged
+  # check and check's stamp comparison are byte-identity against a fresh
+  # render, so a CRLF checkout reports every icon as drifted. STAMP_PATTERN
+  # allows for the \r; this job is what proves it.
+  #
+  # None of that is reachable from a Linux runner, and neither is the file
+  # locking that removing published icons and clearing compiled views runs
+  # into. Keep it even though nothing under src/ names an operating system.
+  #
+  # It runs the same steps as the Linux matrix. It did not until the compiled
+  # view path was made per-worker (see Tests\TestCase::compiledViewPath): the
+  # icon verbs clear that directory, so under --parallel one worker's publish
+  # deleted views another was running on, which POSIX tolerates and Windows
+  # does not. Keep the two step lists identical -- a Windows job that tests
+  # less than its twin is one whose green is worth less than it looks.
   tests-windows:
     runs-on: windows-latest
 
@@ -50,8 +70,11 @@ jobs:
       - name: Linter
         run: composer lint:check
 
+      - name: Type Coverage
+        run: composer test:types
+
       - name: Test Suite
-        run: vendor/bin/pest
+        run: composer test:unit
 
   tests:
     runs-on: ${{ matrix.os }}

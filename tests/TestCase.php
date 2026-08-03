@@ -18,9 +18,43 @@ abstract class TestCase extends Orchestra
      */
     public static function iconPath(): string
     {
+        return sys_get_temp_dir().'/shape-icons-'.self::worker();
+    }
+
+    /**
+     * Where this process compiles views.
+     *
+     * Testbench resolves `view.compiled` to one directory in the shared skeleton,
+     * and the icon verbs clear that directory wholesale -- folding copies an
+     * icon's markup into every view that renders it, so a published file changing
+     * means every compiled view is suspect. Under --parallel that makes one
+     * worker's publish delete the views another worker is running on.
+     *
+     * POSIX hides it: a worker holding an open compiled view keeps reading it,
+     * and one that loses a file recompiles. Windows does not, and the way it
+     * fails is quiet -- Filesystem::delete() swallows the failed unlink and
+     * returns false, which nothing checks, so the stale view survives the clear
+     * and some later test renders artwork it never published.
+     *
+     * A directory per worker removes the sharing rather than the clearing, which
+     * keeps the commands under test behaving as they do in an application.
+     */
+    public static function compiledViewPath(): string
+    {
+        return sys_get_temp_dir().'/shape-views-'.self::worker();
+    }
+
+    /**
+     * What distinguishes this process from the others in a parallel run.
+     *
+     * TEST_TOKEN is Paratest's; the pid covers a single-process run, where there
+     * is nobody to collide with anyway.
+     */
+    private static function worker(): string
+    {
         $token = getenv('TEST_TOKEN');
 
-        return sys_get_temp_dir().'/shape-icons-'.($token === false ? getmypid() : $token);
+        return (string) ($token === false ? getmypid() : $token);
     }
 
     /**
@@ -61,6 +95,17 @@ abstract class TestCase extends Orchestra
         // is already too late. Keying it per process keeps parallel workers off
         // each other's directory, since they share one skeleton application.
         $app['config']->set('shape.icons.path', self::iconPath());
+
+        // The same sharing problem, for the directory the icon verbs clear (see
+        // compiledViewPath). Blade writes into this path rather than creating it,
+        // so it has to exist before the first render.
+        $compiled = self::compiledViewPath();
+
+        if (! is_dir($compiled)) {
+            mkdir($compiled, 0777, true);
+        }
+
+        $app['config']->set('view.compiled', $compiled);
 
         $app->afterResolving(IconFactory::class, function (IconFactory $factory): void {
             $factory->add('fixture', [
