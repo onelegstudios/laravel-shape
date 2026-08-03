@@ -12,11 +12,12 @@ use function Laravel\Prompts\select;
 /**
  * The facts about the published directory that the icon verbs share.
  *
- * Where it is, what is in it, which set is being addressed, whether there is
- * anyone to ask, and how to invalidate what was compiled from it. Each of those
- * encodes something non-obvious -- which stdin counts as answerable, which
- * compiled-view directories have to go, why `default/` is not a set -- and a
- * second copy of any of them is a copy that drifts.
+ * Where it is, what is in it, which set is being addressed, and how to
+ * invalidate what was compiled from it. Each of those encodes something
+ * non-obvious -- which compiled-view directories have to go, why `default/` is
+ * not a set -- and a second copy of any of them is a copy that drifts. Whether
+ * there is anyone to ask is the same kind of fact but not about this directory,
+ * so it lives in AsksWhenAnswerable, which this trait uses on the verbs' behalf.
  *
  * The listing methods carry more weight than that, though: `publishedIconsIn()`
  * is where a name earns the right to become a path. Both `remove` and `update`
@@ -34,6 +35,8 @@ use function Laravel\Prompts\select;
  */
 trait InteractsWithPublishedIcons
 {
+    use AsksWhenAnswerable;
+
     /**
      * Where published icons live in the application.
      *
@@ -50,27 +53,6 @@ trait InteractsWithPublishedIcons
         return is_string($path) && $path !== ''
             ? $path
             : resource_path('views/vendor/shape-icons');
-    }
-
-    /**
-     * Whether there is someone on the other end to answer a prompt.
-     *
-     * The same test Laravel applies before making prompts live, repeated here
-     * because the two answers have to agree: a prompt that quietly returns its
-     * default would turn a scripted run that used to fail loudly into one that
-     * does nothing and reports success. --no-interaction and a redirected stdin
-     * both land back on the error.
-     */
-    private function canAsk(): bool
-    {
-        if (! $this->input->isInteractive()) {
-            return false;
-        }
-
-        // Only the terminal half is waived under test, where there is a mock on
-        // the other end and never a tty.
-        return $this->laravel->runningUnitTests()
-            || (defined('STDIN') && stream_isatty(STDIN));
     }
 
     /**
