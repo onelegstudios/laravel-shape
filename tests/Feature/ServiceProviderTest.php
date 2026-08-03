@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Artisan;
 use Onelegstudios\Shape\Shape;
 
 it('resolves the singleton', function () {
@@ -24,8 +25,15 @@ it('loads the package views', function () {
     expect(view()->exists('shape::components.button'))->toBeTrue();
 });
 
-it('registers the artisan command', function () {
-    $this->artisan('shape:placeholder')
-        ->expectsOutputToContain('Shape placeholder command executed.')
-        ->assertSuccessful();
+it('registers the artisan commands', function () {
+    $registered = array_keys(Artisan::all());
+
+    expect($registered)->toContain(
+        'shape:install',
+        'shape:icon',
+        'shape:icon:add',
+        'shape:icon:check',
+        'shape:icon:remove',
+        'shape:icon:update',
+    );
 });
