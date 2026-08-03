@@ -38,12 +38,26 @@ it('publishes an icon into a directory named for the set', function () {
 });
 
 it('resolves a name through the alias table but keeps Shape\'s own name on the file', function () {
-    // `close` is Lucide's `x`. The file is named for what views ask for, so
-    // swapping the library later is a re-publish rather than a find-and-replace.
+    // An alias an application added, rather than one the package ships: the
+    // mechanism is the same and the test does not move when the shipped table
+    // does. `close` is Lucide's `x`, and the file is named for what views ask
+    // for, so swapping the library later is a re-publish rather than a
+    // find-and-replace.
+    config()->set('shape.icons.aliases', ['close' => 'x']);
+
     publishIcon(['name' => ['close']])->assertSuccessful();
 
     expect(File::exists($this->iconPath.'/lucide/close.blade.php'))->toBeTrue()
         ->and(File::get($this->iconPath.'/lucide/close.blade.php'))->toContain('lucide-x');
+});
+
+it('publishes the alias the package ships', function () {
+    // The button's loading state renders `spinner`, so this is the one entry a
+    // component depends on: the shipped table has to name an icon the configured
+    // set actually holds, or the state fails the first time it is rendered.
+    publishIcon(['name' => ['spinner']])->assertSuccessful();
+
+    expect(File::get($this->iconPath.'/lucide/spinner.blade.php'))->toContain('lucide-loader-circle');
 });
 
 it('records a stamp in the file it writes', function () {
@@ -96,9 +110,9 @@ it('warns and leaves a published icon alone rather than overwriting it', functio
 it('adds the icons that are missing and warns about the ones that are not', function () {
     publishIcon(['name' => ['check']])->assertSuccessful();
 
-    publishIcon(['name' => ['check', 'close']])->assertSuccessful();
+    publishIcon(['name' => ['check', 'x']])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/close.blade.php'))->toContain('<svg');
+    expect(File::get($this->iconPath.'/lucide/x.blade.php'))->toContain('<svg');
 });
 
 it('fails naming the prefix it tried when the icon does not exist', function () {
@@ -116,12 +130,12 @@ it('fails when given no names and no --all and nobody to ask', function () {
 it('asks for icon names when nothing is named', function () {
     publishIcon()
         ->expectsQuestion('Which icon?', 'check')
-        ->expectsQuestion('Which icon?', 'close')
+        ->expectsQuestion('Which icon?', 'x')
         ->expectsQuestion('Which icon?', '')
         ->assertSuccessful();
 
     expect(File::exists($this->iconPath.'/lucide/check.blade.php'))->toBeTrue()
-        ->and(File::exists($this->iconPath.'/lucide/close.blade.php'))->toBeTrue();
+        ->and(File::exists($this->iconPath.'/lucide/x.blade.php'))->toBeTrue();
 });
 
 it('asks which set to take them from once more than one is configured', function () {
@@ -182,6 +196,8 @@ it('rejects a name the set does not have instead of collecting it', function () 
 it('offers Shape\'s own names as well as the set\'s', function () {
     // `close` is not a Lucide name -- it is an alias for `x` -- and it has to be
     // answerable here, because it is the name the published file gets.
+    config()->set('shape.icons.aliases', ['close' => 'x']);
+
     publishIcon()
         ->expectsQuestion('Which icon?', 'close')
         ->expectsQuestion('Which icon?', '')
@@ -217,9 +233,9 @@ it('folds a published icon away entirely', function () {
 });
 
 it('resolves the default forward to the default set', function () {
-    publishIcon(['name' => ['close']])->assertSuccessful();
+    publishIcon(['name' => ['check']])->assertSuccessful();
 
-    expect(Blade::render('<x-shape-icon::default.close />'))->toContain('<svg');
+    expect(Blade::render('<x-shape-icon::default.check />'))->toContain('<svg');
 });
 
 it('drops compiled views, including Blaze\'s own, once something is published', function () {

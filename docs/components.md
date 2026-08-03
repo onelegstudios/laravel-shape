@@ -43,6 +43,26 @@ do not, so a small button is denser without being quieter and every rung answers
 and `lg` stands 44px. Anything larger is a landing page rather than an interface; reach for
 your own classes there.
 
+`loading` is the state a submitting form puts the button in:
+
+```blade
+<shape:button variant="solid" color="primary" type="submit" :loading="$saving">
+    Save changes
+</shape:button>
+```
+
+The label goes invisible where it stands and a spinner takes the centre, so the button keeps
+the width it had and the row around it doesn't reflow at the moment the form is submitted. It
+also disables itself — a second click on a button that is already working is the bug this
+state exists to prevent — and sets `aria-busy="true"`, announcing as "Loading" while the
+hidden label is out of the accessibility tree. The usual disabled fade is dropped for the
+duration: the spinner is the signal, and a faded one reads as a button that has given up.
+
+The spinner is a published icon rather than one Shape ships, so
+`php artisan shape:icon:add spinner` has to have run — `shape:install` does it for you. It
+resolves through the `spinner` alias, which means the artwork is yours to choose: point it at
+another name in [Configuration](configuration.md) and the button follows.
+
 ## Icon
 
 Icons have their own page: [Icons](icons.md).

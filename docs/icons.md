@@ -5,7 +5,7 @@ publish the icons you use, and write them the same way you always would:
 
 ```bash
 composer require mallardduck/blade-lucide-icons
-php artisan shape:icon:add check close chevron-down
+php artisan shape:icon:add check chevron-down spinner
 ```
 
 `php artisan shape:install` does both of those for you on a fresh install, publishing every name
@@ -402,15 +402,28 @@ php artisan vendor:publish --tag=blade-icons
 
 ## Semantic Names
 
-Shape's own components can't name `x` or `x-mark` directly — the package has no idea which
-library you installed. They ask for `close`, and `config/shape.php` maps it:
+Shape's own components can't name `loader-circle` or `arrow-path` directly — the package has no idea
+which library you installed. The button's [loading state](components.md#button) asks for
+`spinner`, and `config/shape.php` maps it:
 
 ```php
 'aliases' => [
-    'check' => 'check',
-    'chevron-down' => 'chevron-down',
-    'close' => 'x',            // Heroicons calls this 'x-mark'
+    'spinner' => 'loader-circle',   // Heroicons calls this 'arrow-path'
+],
+```
+
+The table holds one entry per icon a Shape component renders, and `shape:install` publishes
+exactly those names — so a component's icon reaches your application without you being asked
+for it, and repointing one is a config edit rather than a fork.
+
+Your own names belong here too. Alias `close` to `x` and every call site can write
+`<shape:icon name="close" />`, which survives the day you swap Lucide for a library that calls
+it `x-mark`:
+
+```php
+'aliases' => [
     'spinner' => 'loader-circle',
+    'close' => 'x',
 ],
 ```
 

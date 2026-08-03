@@ -58,14 +58,15 @@ return [
             ]),
         ],
         [
-            // `close` is not a Lucide icon. It is the semantic name Shape's own
-            // components use, mapped to `x` in config/shape.php -- which is what
-            // lets a consumer swap icon libraries without touching a view.
+            // `spinner` is not a Lucide icon. It is the semantic name Shape's own
+            // components use, mapped to `loader-circle` in config/shape.php -- which is
+            // what lets a consumer swap icon libraries without touching a view,
+            // and what the button's loading state renders through.
             'title' => 'A semantic alias resolved through config',
             'source' => implode("\n", [
-                '<shape:icon name="close" label="Dismiss" />',
-                '<shape:icon name="chevron-down" />',
                 '<shape:icon name="spinner" class="animate-spin" color="primary" label="Loading" />',
+                '<shape:icon name="chevron-down" />',
+                '<shape:icon name="x" label="Dismiss" />',
             ]),
         ],
     ],

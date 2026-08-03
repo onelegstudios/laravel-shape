@@ -207,6 +207,8 @@ it('reports a name that was never published and carries on', function () {
 it('names the file rather than resolving it through the alias table', function () {
     // `add close` writes close.blade.php holding Lucide's `x`, so `update close`
     // has to look for that file and not for one named after the set's own name.
+    config()->set('shape.icons.aliases', ['close' => 'x']);
+
     seedIcon(['name' => ['close']])->assertSuccessful();
 
     updateIcon(['name' => ['close']])->assertSuccessful();
@@ -351,7 +353,7 @@ it('updates every published icon in the set with --all', function () {
 });
 
 it('asks before rewriting the whole set', function () {
-    seedIcon(['name' => ['check', 'close']])->assertSuccessful();
+    seedIcon(['name' => ['check', 'x']])->assertSuccessful();
 
     File::put($this->iconPath.'/lucide/check.blade.php', 'EDITED');
 
@@ -364,7 +366,7 @@ it('asks before rewriting the whole set', function () {
 });
 
 it('rewrites the set once the confirmation is answered', function () {
-    seedIcon(['name' => ['check', 'close']])->assertSuccessful();
+    seedIcon(['name' => ['check', 'x']])->assertSuccessful();
 
     File::put($this->iconPath.'/lucide/check.blade.php', 'EDITED');
 

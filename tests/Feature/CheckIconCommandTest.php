@@ -253,10 +253,10 @@ it('narrows the report to the named set', function () {
 });
 
 it('narrows the report to the named icons', function () {
-    stageIcon(['name' => ['check', 'close']])->assertSuccessful();
+    stageIcon(['name' => ['check', 'x']])->assertSuccessful();
 
-    checkIcons(['name' => ['close']])
-        ->expectsOutputToContain('lucide/close')
+    checkIcons(['name' => ['x']])
+        ->expectsOutputToContain('lucide/x')
         ->doesntExpectOutputToContain('lucide/check')
         ->assertSuccessful();
 });

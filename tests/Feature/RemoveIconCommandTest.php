@@ -42,14 +42,14 @@ it('removes a published icon', function () {
 
 it('takes the default forward away with the icon it points at', function () {
     // The forward is written by `add` alongside the real file, so leaving it
-    // behind would break <shape:icon name="close" /> with nothing to render.
-    publish(['name' => ['close']])->assertSuccessful();
+    // behind would break <shape:icon name="x" /> with nothing to render.
+    publish(['name' => ['x']])->assertSuccessful();
 
-    expect(File::exists($this->iconPath.'/default/close.blade.php'))->toBeTrue();
+    expect(File::exists($this->iconPath.'/default/x.blade.php'))->toBeTrue();
 
-    removeIcon(['name' => ['close']])->assertSuccessful();
+    removeIcon(['name' => ['x']])->assertSuccessful();
 
-    expect(File::exists($this->iconPath.'/default/close.blade.php'))->toBeFalse();
+    expect(File::exists($this->iconPath.'/default/x.blade.php'))->toBeFalse();
 });
 
 it('leaves a forward alone when it points at another set', function () {
@@ -69,6 +69,8 @@ it('leaves a forward alone when it points at another set', function () {
 it('names the file rather than resolving it through the alias table', function () {
     // `add close` writes close.blade.php holding Lucide's `x`, so `remove close`
     // has to look for that file and not for one named after the set's own name.
+    config()->set('shape.icons.aliases', ['close' => 'x']);
+
     publish(['name' => ['close']])->assertSuccessful();
 
     removeIcon(['name' => ['close']])->assertSuccessful();
@@ -128,16 +130,16 @@ it('drops a set directory once its last icon is gone', function () {
 });
 
 it('keeps a set directory that still holds something', function () {
-    publish(['name' => ['check', 'close']])->assertSuccessful();
+    publish(['name' => ['check', 'x']])->assertSuccessful();
 
     removeIcon(['name' => ['check']])->assertSuccessful();
 
     expect(File::isDirectory($this->iconPath.'/lucide'))->toBeTrue()
-        ->and(File::exists($this->iconPath.'/lucide/close.blade.php'))->toBeTrue();
+        ->and(File::exists($this->iconPath.'/lucide/x.blade.php'))->toBeTrue();
 });
 
 it('removes every published icon in the set with --all', function () {
-    publish(['name' => ['check', 'close']])->assertSuccessful();
+    publish(['name' => ['check', 'x']])->assertSuccessful();
 
     removeIcon(['--all' => true, '--force' => true])->assertSuccessful();
 
@@ -145,7 +147,7 @@ it('removes every published icon in the set with --all', function () {
 });
 
 it('asks before sweeping the whole set', function () {
-    publish(['name' => ['check', 'close']])->assertSuccessful();
+    publish(['name' => ['check', 'x']])->assertSuccessful();
 
     removeIcon(['--all' => true])
         ->expectsConfirmation('Remove all 2 published icon(s) from set [lucide]?', 'no')
@@ -156,7 +158,7 @@ it('asks before sweeping the whole set', function () {
 });
 
 it('sweeps the set once the confirmation is answered', function () {
-    publish(['name' => ['check', 'close']])->assertSuccessful();
+    publish(['name' => ['check', 'x']])->assertSuccessful();
 
     removeIcon(['--all' => true])
         ->expectsConfirmation('Remove all 2 published icon(s) from set [lucide]?', 'yes')
@@ -186,14 +188,14 @@ it('fails when given no names and no --all and nobody to ask', function () {
 });
 
 it('asks which icons to remove when nothing is named', function () {
-    publish(['name' => ['check', 'close']])->assertSuccessful();
+    publish(['name' => ['check', 'x']])->assertSuccessful();
 
     removeIcon()
-        ->expectsChoice('Which icons should be removed?', ['check'], ['check', 'close'])
+        ->expectsChoice('Which icons should be removed?', ['check'], ['check', 'x'])
         ->assertSuccessful();
 
     expect(File::exists($this->iconPath.'/lucide/check.blade.php'))->toBeFalse()
-        ->and(File::exists($this->iconPath.'/lucide/close.blade.php'))->toBeTrue();
+        ->and(File::exists($this->iconPath.'/lucide/x.blade.php'))->toBeTrue();
 });
 
 it('removes nothing and succeeds when nothing is selected', function () {

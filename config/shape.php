@@ -99,15 +99,18 @@ return [
         // through untouched, so call sites keep using real icon names and this
         // does not become a second vocabulary to learn.
         //
-        // The four below are examples for now: no Shape component renders an icon
-        // yet, so nothing depends on them. They are here to show the shape of the
-        // table and to name the icons the first components will reach for. Treat
-        // them as a starting point -- prune the ones you have no use for, and
-        // expect the list to be filled in properly as components arrive.
+        // One entry per icon a Shape component actually renders, which is also the
+        // list `shape:install` publishes unasked -- adding a name here is how a
+        // component's icon reaches an application, and removing one is how a
+        // component that renders it starts failing.
+        //
+        // The button's loading state is the only entry so far. It names Lucide's
+        // `loader-circle` -- a single arc, so a plain rotation reads as movement
+        // at a glance -- rather than `loader`, whose evenly spaced spokes look
+        // nearly still while they turn. Point it at any icon you would rather
+        // see and re-publish; the component is untouched either way, which is
+        // the whole point of the table.
         'aliases' => [
-            'check' => 'check',
-            'chevron-down' => 'chevron-down',
-            'close' => 'x',
             'spinner' => 'loader-circle',
         ],
 
