@@ -24,8 +24,11 @@ function publishDestinations(string $tag): array
 it('publishes the config under the shape tag', function () {
     $paths = publishDestinations('shape-config');
 
+    // The destination follows the application's config path, which the suite
+    // points at a per-process directory so `shape:install` publishing in one
+    // worker cannot land in a directory another worker reads at boot.
     expect($paths)->toHaveCount(1)
-        ->and($paths[0])->toEndWith('config/shape.php');
+        ->and($paths[0])->toBe(str_replace('\\', '/', config_path('shape.php')));
 });
 
 it('publishes the views under the shape tag', function () {

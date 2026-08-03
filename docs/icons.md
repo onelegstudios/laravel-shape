@@ -8,6 +8,9 @@ composer require mallardduck/blade-lucide-icons
 php artisan shape:icon:add check close chevron-down
 ```
 
+`php artisan shape:install` does both of those for you on a fresh install, publishing every name
+in the alias table. Everything below is for the icons you add afterwards.
+
 ```blade
 <shape:icon name="check" />
 

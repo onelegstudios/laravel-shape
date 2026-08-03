@@ -45,6 +45,40 @@ abstract class TestCase extends Orchestra
     }
 
     /**
+     * Where this process publishes configuration.
+     *
+     * `shape:install` can publish `config/shape.php`, and the skeleton's config
+     * directory is read at boot by every worker: a test that publishes into it
+     * leaves a file the next boot loads, and one that cleans up afterwards can
+     * delete it between another worker's directory listing and its require. That
+     * failure is a fatal error in an unrelated test, which is a long way from
+     * the test that caused it.
+     *
+     * Redirected before the provider boots, so the publish destination it
+     * registers and the path the command checks are the same one.
+     */
+    public static function configPath(): string
+    {
+        return sys_get_temp_dir().'/shape-config-'.self::worker();
+    }
+
+    /**
+     * The stylesheet this process installs the theme into.
+     *
+     * Inside the skeleton rather than in scratch space, because the import line
+     * `shape:install` writes is relative to the application root -- a stylesheet
+     * in /tmp would be given an absolute path and prove nothing about the one a
+     * consumer gets. Keyed per worker for the usual reason: one skeleton, many
+     * processes.
+     *
+     * Only callable once the application has booted.
+     */
+    public static function stylesheetPath(): string
+    {
+        return resource_path('css/shape-install-'.self::worker().'.css');
+    }
+
+    /**
      * What distinguishes this process from the others in a parallel run.
      *
      * TEST_TOKEN is Paratest's; the pid covers a single-process run, where there
@@ -106,6 +140,17 @@ abstract class TestCase extends Orchestra
         }
 
         $app['config']->set('view.compiled', $compiled);
+
+        // Config has been loaded by now and the providers have not booted, which
+        // is the only window where moving this path is both safe and useful (see
+        // configPath).
+        $config = self::configPath();
+
+        if (! is_dir($config)) {
+            mkdir($config, 0777, true);
+        }
+
+        $app->useConfigPath($config);
 
         $app->afterResolving(IconFactory::class, function (IconFactory $factory): void {
             $factory->add('fixture', [

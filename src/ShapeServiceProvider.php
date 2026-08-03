@@ -9,6 +9,7 @@ use Illuminate\Support\ServiceProvider;
 use Onelegstudios\Shape\Console\Commands\AddIconCommand;
 use Onelegstudios\Shape\Console\Commands\CheckIconCommand;
 use Onelegstudios\Shape\Console\Commands\IconCommand;
+use Onelegstudios\Shape\Console\Commands\InstallCommand;
 use Onelegstudios\Shape\Console\Commands\RemoveIconCommand;
 use Onelegstudios\Shape\Console\Commands\ShapeCommand;
 use Onelegstudios\Shape\Console\Commands\UpdateIconCommand;
@@ -81,6 +82,7 @@ class ShapeServiceProvider extends ServiceProvider
             AddIconCommand::class,
             CheckIconCommand::class,
             IconCommand::class,
+            InstallCommand::class,
             RemoveIconCommand::class,
             ShapeCommand::class,
             UpdateIconCommand::class,

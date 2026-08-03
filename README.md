@@ -14,31 +14,29 @@ Shape the interface. Predictable UI components for Laravel and Livewire.
 
 ## Installation
 
-You can install the package via Composer, along with an icon set — Lucide is the one Shape's
-config points at out of the box:
+Install the package with Composer, then run the installer:
 
 ```bash
-composer require onelegstudios/laravel-shape mallardduck/blade-lucide-icons
+composer require onelegstudios/laravel-shape
+php artisan shape:install
 ```
 
-Icons are published into your application rather than resolved on every render, so publish the
-ones you use:
+`shape:install` imports the theme into your application stylesheet, offers to install an icon
+set, and publishes the icons Shape's own components render. It changes nothing it did not
+write — a stylesheet that already imports the theme is left alone, and so is a published icon —
+so running it again is how you check the first run worked.
 
-```bash
-php artisan shape:icon:add check close chevron-down
-```
+The rest of this section is what the installer does, for anyone who would rather do it by hand
+or wants to know what changed.
 
-The set stays a package you own — swap or remove it with plain Composer, and re-publish. See
-[Icons](docs/icons.md) for sets, semantic names, and the full command.
+Composer pulls in [Blaze](https://github.com/livewire/blaze), which compiles Shape's components
+into plain PHP functions instead of routing them through Blade's component pipeline. Unlike the
+icon set it is a real dependency, because the shipped views carry the `@blaze` directive and
+Blade renders an unregistered directive as literal text. Nothing about using Shape changes. See
+[Performance](docs/components.md#performance).
 
-Composer will also pull in [Blaze](https://github.com/livewire/blaze), which compiles Shape's
-components into plain PHP functions instead of routing them through Blade's component
-pipeline. Unlike the icon set it is a real dependency, because the shipped views carry the
-`@blaze` directive and Blade renders an unregistered directive as literal text. Nothing about
-using Shape changes. See [Performance](docs/components.md#performance).
-
-Shape requires **Tailwind CSS v4.1** or newer. Import the package's theme in your application
-stylesheet:
+Shape requires **Tailwind CSS v4.1** or newer. The installer adds the theme import to your
+application stylesheet, immediately after the imports already there:
 
 ```css
 @import "tailwindcss";
@@ -49,6 +47,33 @@ That one line does two things: it defines the semantic colour roles Shape's comp
 style themselves against, and it tells Tailwind to scan the package's Blade views so the
 component classes are actually generated. Skip it and the components render unstyled. See
 [Theming](docs/theming.md) for what the theme defines and how to override it.
+
+Icons are published into your application rather than resolved on every render, so the installer
+also installs an icon set — Lucide is the one Shape's config points at out of the box — and
+publishes the names Shape's own components ask for:
+
+```bash
+composer require mallardduck/blade-lucide-icons
+php artisan shape:icon:add check chevron-down close spinner
+```
+
+The set stays a package you own — swap or remove it with plain Composer, and re-publish. See
+[Icons](docs/icons.md) for sets, semantic names, and the rest of the commands.
+
+The installer takes flags for each of its steps, so it can run unattended:
+
+```bash
+php artisan shape:install --no-interaction --icons
+php artisan shape:install --css=resources/css/theme.css --no-icons
+```
+
+| Flag | What it does |
+| --- | --- |
+| `--css=` | The stylesheet the theme import is added to, instead of `resources/css/app.css` |
+| `--no-css` | Leave the stylesheet alone |
+| `--icons` | Install the configured set and publish the icons without asking |
+| `--no-icons` | Skip the icon set entirely |
+| `--config` | Publish `config/shape.php` without asking |
 
 You may publish all of the package's resources at once:
 
