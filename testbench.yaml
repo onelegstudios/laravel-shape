@@ -27,6 +27,32 @@ workbench:
     - create-sqlite-db
     - db-wipe
     - migrate-fresh
+    # Shape ships no icons: an application publishes the ones it renders, and
+    # the gallery is an application. Without this step every page that draws an
+    # icon fails to resolve <x-shape-icon::default.*> and 500s -- including the
+    # button, which renders `spinner` in its loading state.
+    #
+    # The names are every one the gallery asks for -- the examples in
+    # workbench/resources/gallery/*.php and the scheme switcher in its layout --
+    # so a page that reaches for a new icon adds it here too. `shape:icon:add`
+    # never overwrites, which is what makes re-running the build cheap.
+    - shape-icon-add:
+        name:
+          - arrow-right
+          - check
+          - chevron-down
+          - circle-check
+          - circle-x
+          - download
+          - info
+          - monitor
+          - moon
+          - settings
+          - spinner
+          - sun
+          - trash-2
+          - triangle-alert
+          - x
   assets:
     - laravel-assets
   sync:
