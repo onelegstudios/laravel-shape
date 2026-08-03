@@ -16,6 +16,7 @@
     'variant' => null,
     'color' => null,
     'size' => null,
+    'loading' => false,
 ])
 
 @php
@@ -59,7 +60,21 @@
     // Radius lives here rather than in a size recipe: it is the component's shape
     // rather than its size, and keeping it in one place leaves a consumer a single
     // `--radius-md` to override instead of one per rung.
-    $base = 'inline-flex items-center justify-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50';
+    // A bare `<shape:button loading>` arrives as a boolean, but the interesting
+    // call site passes a variable -- and a `loading="false"` from a template that
+    // stringified one should not read as busy.
+    $busy = filter_var($loading, FILTER_VALIDATE_BOOLEAN);
+
+    $base = 'inline-flex items-center justify-center rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none';
+
+    // A loading button is disabled, so it would take the fade every other disabled
+    // button takes -- and a half-transparent spinner reads as a component that has
+    // given up rather than one that is working. The spinner is the signal here, so
+    // the fade steps aside and the button stays at full contrast.
+    //
+    // `relative` is the positioning context for the overlay below, and is only
+    // worth what it costs in the one state that has something to position.
+    $base .= $busy ? ' relative' : ' disabled:opacity-50';
 
     $recipes = [
         'solid' => 'font-semibold shadow-sm bg-:role-fill text-:role-on-fill hover:bg-:role-fill-hover hover:shadow-md active:shadow-sm focus-visible:outline-:role-ring',
@@ -97,9 +112,51 @@
     $role = preg_match('/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/', $color) === 1 ? $color : 'neutral';
 
     $classes = str_replace(':role', $role, $recipes[$variant] ?? $recipes['outline']);
-    $scale = $sizes[$size] ?? $sizes['md'];
+
+    // The rung is resolved rather than only its classes, because the spinner is
+    // handed the same one: an icon in a `sm` button should be the `sm` icon, and
+    // a size the scale does not have has to fall back in both places at once.
+    $rung = isset($sizes[$size]) ? $size : 'md';
+    $scale = $sizes[$rung];
+
+    // Loading is disabled with a reason, and both halves matter: `disabled` is
+    // what stops the second submit, `aria-busy` is what says why. They are merged
+    // as defaults, so a call site that wants to spin without disabling can still
+    // say so -- though `merge` can add an attribute and never take one away.
+    $state = $busy ? ['disabled' => 'disabled', 'aria-busy' => 'true'] : [];
 @endphp
 
-<button {{ $attributes->merge(['type' => 'button', 'class' => $base.' '.$scale.' '.$classes]) }}>
-    {{ $slot }}
+<button {{ $attributes->merge(array_merge(['type' => 'button', 'class' => $base.' '.$scale.' '.$classes], $state)) }}>
+    @if ($busy)
+        {{-- The label stays in the layout so the button keeps the width it had:
+             a form that starts submitting should not reflow around it.
+
+             `contents` is what makes that exact rather than approximate. A wrapper
+             that generated a box would collapse an icon-and-label slot into one
+             flex item and swallow the rung's `gap`, costing the button those few
+             pixels; with `display: contents` the children stay flex items of the
+             button itself. `visibility` is inherited, so hiding the wrapper still
+             hides them -- and takes them out of the accessibility tree, which is
+             why the spinner below carries the label instead.
+
+             The overlay is the wrapper's sibling rather than its child, which is
+             what keeps it visible and on the button's own `currentColor`. --}}
+        <span class="contents invisible">{{ $slot }}</span>
+
+        {{-- Written long-form rather than as `<shape:icon>`: the short tag is a
+             convenience the package compiles for applications, and its own views
+             should not need it to render.
+
+             `animate-spin` is a plain rotation because the artwork is the
+             consumer's -- the alias can point at a ring, a dial, or a set Shape
+             has never seen, and continuous rotation is the one motion that suits
+             all of them. The dynamic props decline to fold, which is right: a
+             folded label would freeze the locale into the compiled view the same
+             way folding would freeze this component's config. --}}
+        <span class="absolute inset-0 grid place-items-center">
+            <x-shape::icon name="spinner" :size="$rung" class="animate-spin" :label="__('shape::messages.button.loading')" />
+        </span>
+    @else
+        {{ $slot }}
+    @endif
 </button>

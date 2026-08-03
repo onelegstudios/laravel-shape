@@ -72,6 +72,18 @@ return [
             ]),
         ],
         [
+            // The idle button beside each loading one is the point of the row:
+            // they are the same width, so a form that starts submitting does not
+            // reflow around the button that is doing the submitting.
+            'title' => 'Submitting (loading)',
+            'source' => implode("\n", [
+                '<shape:button variant="solid" color="primary" loading>Save changes</shape:button>',
+                '<shape:button variant="solid" color="primary">Save changes</shape:button>',
+                '<shape:button size="sm" loading>Retry</shape:button>',
+                '<shape:button size="sm">Retry</shape:button>',
+            ]),
+        ],
+        [
             // `ocean` is defined in workbench/resources/css/ocean.css, not in the
             // package. Nothing in Shape knows the name -- the component builds the
             // class from whatever role it is handed.

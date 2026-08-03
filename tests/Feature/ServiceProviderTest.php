@@ -18,7 +18,7 @@ it('merges the package config', function () {
 });
 
 it('loads the package translations', function () {
-    expect(trans('shape::messages.placeholder'))->toBe('Shape placeholder translation.');
+    expect(trans('shape::messages.button.loading'))->toBe('Loading');
 });
 
 it('loads the package views', function () {

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\File;
+use Onelegstudios\Shape\Tests\TestCase;
 
 it('defaults to the quiet button so the primary action stays opt-in', function () {
     $html = Blade::render('<shape:button>Cancel</shape:button>');
@@ -192,3 +194,100 @@ it('falls back to a packaged default rather than rendering an unstyled button', 
     'a value of the wrong type' => [['variant' => ['solid'], 'color' => 3, 'size' => ['lg']]],
     'a block that is not an array' => ['solid'],
 ]);
+
+it('renders nothing extra when the loading prop is absent', function () {
+    // The state is the exception, not the shape of every button: an ordinary call
+    // site should come out of this component exactly as it did before it existed,
+    // and should not need an icon published to render at all.
+    expect(Blade::render('<shape:button>Save</shape:button>'))
+        ->not->toContain('aria-busy')
+        ->not->toContain('relative')
+        ->toContain('disabled:opacity-50');
+});
+
+describe('loading', function () {
+    // The spinner is a published icon rather than an SVG this package reads, so
+    // it has to exist on disk before the loading branch can render -- the same
+    // setup the icon component's own tests do, scoped here so the rest of the
+    // file does not pay for it.
+    beforeEach(function () {
+        File::deleteDirectory(TestCase::iconPath());
+
+        $this->artisan('shape:icon:add', ['name' => ['spinner'], '--no-clear' => true])->run();
+    });
+
+    afterEach(function () {
+        File::deleteDirectory(TestCase::iconPath());
+    });
+
+    it('shows a spinning icon in place of the label', function () {
+        $html = Blade::render('<shape:button loading>Save changes</shape:button>');
+
+        expect($html)
+            ->toContain('<svg')
+            ->toContain('animate-spin');
+    });
+
+    it('keeps the label in the layout so the button does not change width', function () {
+        // Hidden rather than removed: a button that shrank to its spinner would
+        // reflow the row it sits in at the exact moment a form was submitting.
+        expect(Blade::render('<shape:button loading>Save changes</shape:button>'))
+            ->toContain('<span class="contents invisible">Save changes</span>');
+    });
+
+    it('disables itself and says why', function () {
+        $html = Blade::render('<shape:button loading>Save changes</shape:button>');
+
+        expect($html)
+            ->toContain('disabled="disabled"')
+            ->toContain('aria-busy="true"');
+    });
+
+    it('announces a name once the label is hidden from assistive tech', function () {
+        // `visibility: hidden` takes the label out of the accessibility tree, so
+        // without this the button would announce as nothing at all.
+        expect(Blade::render('<shape:button loading>Save changes</shape:button>'))
+            ->toContain('aria-label="Loading"');
+    });
+
+    it('keeps the spinner at full contrast rather than taking the disabled fade', function () {
+        // The button is disabled while it loads, but a half-transparent spinner
+        // reads as a component that has given up rather than one that is working.
+        expect(Blade::render('<shape:button loading>Save changes</shape:button>'))
+            ->not->toContain('disabled:opacity-50');
+    });
+
+    it('sizes the spinner to the rung the button resolved', function (string $size, string $expected) {
+        expect(Blade::render('<shape:button size="'.$size.'" loading>Save</shape:button>'))
+            ->toContain($expected);
+    })->with([
+        'xs takes the smallest icon' => ['xs', 'size-3.5'],
+        'sm matches a toolbar' => ['sm', 'size-4'],
+        'md is the form default' => ['md', 'size-5'],
+        'lg is the largest' => ['lg', 'size-6'],
+        'a size the scale does not have falls back with the button' => ['huge', 'size-5'],
+    ]);
+
+    it('reads a stringified false as not loading', function () {
+        // A call site passing a variable through a template can hand this a string
+        // rather than a boolean, and "false" must not read as busy.
+        expect(Blade::render('<shape:button loading="false">Save</shape:button>'))
+            ->toBe(Blade::render('<shape:button>Save</shape:button>'));
+    });
+
+    it('does not leak the loading prop onto the rendered element', function () {
+        expect(Blade::render('<shape:button loading>Save</shape:button>'))
+            ->not->toContain('loading="');
+    });
+
+    it('composes with the styling props', function () {
+        // Loading is a state, not a fourth axis: it does not make a button quieter,
+        // louder, or a different size.
+        $html = Blade::render('<shape:button variant="solid" color="danger" size="sm" loading>Delete</shape:button>');
+
+        expect($html)
+            ->toContain('bg-danger-fill')
+            ->toContain('px-3 py-1.5 text-sm')
+            ->toContain('animate-spin');
+    });
+});

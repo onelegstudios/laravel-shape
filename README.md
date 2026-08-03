@@ -54,7 +54,7 @@ publishes the names Shape's own components ask for:
 
 ```bash
 composer require mallardduck/blade-lucide-icons
-php artisan shape:icon:add check chevron-down close spinner
+php artisan shape:icon:add spinner
 ```
 
 The set stays a package you own — swap or remove it with plain Composer, and re-publish. See
