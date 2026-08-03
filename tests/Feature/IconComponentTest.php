@@ -15,11 +15,11 @@ use Onelegstudios\Shape\Tests\TestCase;
 beforeEach(function () {
     File::deleteDirectory(TestCase::iconPath());
 
-    $this->artisan('shape:icon', ['name' => ['check', 'close'], '--no-clear' => true])->run();
+    $this->artisan('shape:icon:add', ['name' => ['check', 'close'], '--no-clear' => true])->run();
 
     config()->set('shape.icons.sets', ['fixture' => 'fixture']);
 
-    $this->artisan('shape:icon', [
+    $this->artisan('shape:icon:add', [
         'name' => ['check', 'cross'],
         '--set' => 'fixture',
         '--no-clear' => true,

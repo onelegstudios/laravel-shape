@@ -6,8 +6,12 @@ namespace Onelegstudios\Shape;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
-use Onelegstudios\Shape\Console\Commands\PublishIconCommand;
+use Onelegstudios\Shape\Console\Commands\AddIconCommand;
+use Onelegstudios\Shape\Console\Commands\CheckIconCommand;
+use Onelegstudios\Shape\Console\Commands\IconCommand;
+use Onelegstudios\Shape\Console\Commands\RemoveIconCommand;
 use Onelegstudios\Shape\Console\Commands\ShapeCommand;
+use Onelegstudios\Shape\Console\Commands\UpdateIconCommand;
 
 class ShapeServiceProvider extends ServiceProvider
 {
@@ -68,14 +72,18 @@ class ShapeServiceProvider extends ServiceProvider
         // Deliberately not part of the "shape" bundle: the icons Shape ships are
         // the ones its own components render, and a consumer publishing them
         // takes on keeping them current for no benefit. Publishing an icon is
-        // what `shape:icon` is for.
+        // what `shape:icon:add` is for.
         $this->publishes([
             __DIR__.'/../resources/icons' => $this->iconPath(),
         ], ['shape-icons']);
 
         $this->commands([
-            PublishIconCommand::class,
+            AddIconCommand::class,
+            CheckIconCommand::class,
+            IconCommand::class,
+            RemoveIconCommand::class,
             ShapeCommand::class,
+            UpdateIconCommand::class,
         ]);
     }
 

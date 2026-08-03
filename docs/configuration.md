@@ -39,6 +39,6 @@ key is therefore safe but not neutral: the prop falls back to Shape's own defaul
 ## Icons
 
 The `icons` block — where published icons live, which library a set name points at, and the
-semantic aliases Shape's own components render through — is read by `shape:icon` when you
-publish an icon rather than on every render. It is documented with the component:
+semantic aliases Shape's own components render through — is read by `shape:icon:add` and
+`shape:icon:update` when you publish an icon rather than on every render. It is documented with the component:
 [Icons](icons.md).

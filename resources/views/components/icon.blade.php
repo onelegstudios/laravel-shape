@@ -5,7 +5,7 @@
      behind at all, just the SVG inline in the calling template.
 
      That is only safe because nothing below touches global state. The set, the
-     alias table, and the artwork itself were all resolved by `shape:icon` when
+     alias table, and the artwork itself were all resolved by `shape:icon:add` when
      the icon was published, so what is left here is arithmetic on the props: a
      size class, a colour class, and an accessibility default. A `config()` call
      anywhere in this file would freeze that config into every compiled view the
@@ -70,7 +70,7 @@
         : ['role' => 'img', 'aria-label' => html_entity_decode($label, ENT_QUOTES, 'UTF-8')];
 
     // `shape-icon::` addresses the published icons, application copies first.
-    // `default` is a real directory rather than a config lookup: `shape:icon`
+    // `default` is a real directory rather than a config lookup: `shape:icon:add`
     // writes one alongside the named set, forwarding to it, which is what keeps
     // the configured default set out of this file.
     $icon = 'shape-icon::'.$set.'.'.$name;

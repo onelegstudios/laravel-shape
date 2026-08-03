@@ -25,7 +25,7 @@ Icons are published into your application rather than resolved on every render, 
 ones you use:
 
 ```bash
-php artisan shape:icon check close chevron-down
+php artisan shape:icon:add check close chevron-down
 ```
 
 The set stays a package you own — swap or remove it with plain Composer, and re-publish. See

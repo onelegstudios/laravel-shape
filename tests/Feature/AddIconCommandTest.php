@@ -28,7 +28,7 @@ afterEach(function () {
 
 function publishIcon(array $arguments = []): PendingCommand
 {
-    return test()->artisan('shape:icon', $arguments + ['--no-clear' => true]);
+    return test()->artisan('shape:icon:add', $arguments + ['--no-clear' => true]);
 }
 
 it('publishes an icon into a directory named for the set', function () {
@@ -44,6 +44,14 @@ it('resolves a name through the alias table but keeps Shape\'s own name on the f
 
     expect(File::exists($this->iconPath.'/lucide/close.blade.php'))->toBeTrue()
         ->and(File::get($this->iconPath.'/lucide/close.blade.php'))->toContain('lucide-x');
+});
+
+it('records a stamp in the file it writes', function () {
+    // What `shape:icon:check` reads back to tell a hand edit from a set that has
+    // moved. A published file with no stamp can only be compared on its artwork.
+    publishIcon(['name' => ['check']])->assertSuccessful();
+
+    expect(File::get($this->iconPath.'/lucide/check.blade.php'))->toMatch('/\n\s*stamp:[0-9a-f]{16} --\}\}\n/');
 });
 
 it('keeps same-named icons from two sets apart', function () {
@@ -71,16 +79,26 @@ it('writes a default forward only for the configured default set', function () {
     expect(File::exists($this->iconPath.'/default/check.blade.php'))->toBeFalse();
 });
 
-it('does not overwrite a published icon unless forced', function () {
+it('warns and leaves a published icon alone rather than overwriting it', function () {
+    // Adding never overwrites: the file may have been hand-tuned, and there is
+    // no flag here that says otherwise. Refreshing one is a separate verb.
     publishIcon(['name' => ['check']])->assertSuccessful();
 
     File::put($this->iconPath.'/lucide/check.blade.php', 'EDITED');
 
-    publishIcon(['name' => ['check']])->assertSuccessful();
-    expect(File::get($this->iconPath.'/lucide/check.blade.php'))->toBe('EDITED');
+    publishIcon(['name' => ['check']])
+        ->expectsOutputToContain('already published')
+        ->assertSuccessful();
 
-    publishIcon(['name' => ['check'], '--force' => true])->assertSuccessful();
-    expect(File::get($this->iconPath.'/lucide/check.blade.php'))->not->toBe('EDITED');
+    expect(File::get($this->iconPath.'/lucide/check.blade.php'))->toBe('EDITED');
+});
+
+it('adds the icons that are missing and warns about the ones that are not', function () {
+    publishIcon(['name' => ['check']])->assertSuccessful();
+
+    publishIcon(['name' => ['check', 'close']])->assertSuccessful();
+
+    expect(File::get($this->iconPath.'/lucide/close.blade.php'))->toContain('<svg');
 });
 
 it('fails naming the prefix it tried when the icon does not exist', function () {
@@ -89,8 +107,87 @@ it('fails naming the prefix it tried when the icon does not exist', function () 
         ->assertFailed();
 });
 
-it('fails when given no names and no --all', function () {
-    publishIcon()->assertFailed();
+it('fails when given no names and no --all and nobody to ask', function () {
+    // A scripted run has to fail rather than block on a prompt nothing will
+    // answer, so --no-interaction keeps the old behaviour exactly.
+    publishIcon(['--no-interaction' => true])->assertFailed();
+});
+
+it('asks for icon names when nothing is named', function () {
+    publishIcon()
+        ->expectsQuestion('Which icon?', 'check')
+        ->expectsQuestion('Which icon?', 'close')
+        ->expectsQuestion('Which icon?', '')
+        ->assertSuccessful();
+
+    expect(File::exists($this->iconPath.'/lucide/check.blade.php'))->toBeTrue()
+        ->and(File::exists($this->iconPath.'/lucide/close.blade.php'))->toBeTrue();
+});
+
+it('asks which set to take them from once more than one is configured', function () {
+    config()->set('shape.icons.sets', ['lucide' => 'lucide', 'fixture' => 'fixture']);
+
+    publishIcon()
+        ->expectsChoice('Which set should these icons come from?', 'fixture', [
+            'lucide' => 'lucide',
+            'fixture' => 'fixture',
+        ])
+        ->expectsQuestion('Which icon?', 'cross')
+        ->expectsQuestion('Which icon?', '')
+        ->assertSuccessful();
+
+    expect(File::exists($this->iconPath.'/fixture/cross.blade.php'))->toBeTrue();
+});
+
+it('does not ask which set when the answer could only be one thing', function () {
+    // Only the icon question is expected, and the mock fails the test if the
+    // command asks anything else.
+    publishIcon()
+        ->expectsQuestion('Which icon?', '')
+        ->assertSuccessful();
+});
+
+it('takes the set from --set rather than asking for it', function () {
+    config()->set('shape.icons.sets', ['lucide' => 'lucide', 'fixture' => 'fixture']);
+
+    publishIcon(['--set' => 'fixture'])
+        ->expectsQuestion('Which icon?', 'cross')
+        ->expectsQuestion('Which icon?', '')
+        ->assertSuccessful();
+
+    expect(File::exists($this->iconPath.'/fixture/cross.blade.php'))->toBeTrue();
+});
+
+it('adds nothing and succeeds when the first answer is empty', function () {
+    publishIcon()
+        ->expectsQuestion('Which icon?', '')
+        ->expectsOutputToContain('No icons added.')
+        ->assertSuccessful();
+
+    expect(File::isDirectory($this->iconPath.'/lucide'))->toBeFalse();
+});
+
+it('rejects a name the set does not have instead of collecting it', function () {
+    // Validating in the prompt is what keeps a typo from costing the session:
+    // outside a test this asks again, where a test gives up on the first
+    // rejection rather than looping on an answer that cannot change.
+    publishIcon()
+        ->expectsQuestion('Which icon?', 'not-a-real-icon')
+        ->expectsOutputToContain('lucide-not-a-real-icon')
+        ->assertFailed();
+
+    expect(File::isDirectory($this->iconPath.'/lucide'))->toBeFalse();
+});
+
+it('offers Shape\'s own names as well as the set\'s', function () {
+    // `close` is not a Lucide name -- it is an alias for `x` -- and it has to be
+    // answerable here, because it is the name the published file gets.
+    publishIcon()
+        ->expectsQuestion('Which icon?', 'close')
+        ->expectsQuestion('Which icon?', '')
+        ->assertSuccessful();
+
+    expect(File::get($this->iconPath.'/lucide/close.blade.php'))->toContain('lucide-x');
 });
 
 it('publishes every icon in a set with --all', function () {
@@ -134,7 +231,7 @@ it('drops compiled views, including Blaze\'s own, once something is published', 
     File::put($compiled.'/stale.php', 'stale');
     File::put($compiled.'/blaze/stale.php', 'stale');
 
-    $this->artisan('shape:icon', ['name' => ['check']])->assertSuccessful();
+    $this->artisan('shape:icon:add', ['name' => ['check']])->assertSuccessful();
 
     expect(File::exists($compiled.'/stale.php'))->toBeFalse()
         ->and(File::isDirectory($compiled.'/blaze'))->toBeFalse();
@@ -154,7 +251,7 @@ it('leaves compiled views alone when nothing new was published', function () {
 
     // The second run skips the already-published icon, so there is nothing to
     // invalidate and no reason to make every other view recompile.
-    $this->artisan('shape:icon', ['name' => ['check']])->assertSuccessful();
+    $this->artisan('shape:icon:add', ['name' => ['check']])->assertSuccessful();
 
     expect(File::exists($compiled.'/stale.php'))->toBeTrue();
 
