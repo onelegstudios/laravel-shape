@@ -331,8 +331,11 @@ it('asks which sets to install, which weights, and which one is the default', fu
         ])
         ->expectsConfirmation('Install mallardduck/blade-lucide-icons and blade-ui-kit/blade-heroicons for icons?', 'no')
         ->expectsOutputToContain('composer require mallardduck/blade-lucide-icons blade-ui-kit/blade-heroicons')
-        ->expectsOutputToContain('shape:icon:add --set=lucide spinner')
+        // Both packages, one publish: the icons Shape's own views render are
+        // published from the default set, which is the set those views resolve
+        // through. Lucide is installed for this application's own call sites.
         ->expectsOutputToContain('shape:icon:add --set=solid spinner')
+        ->doesntExpectOutputToContain('shape:icon:add --set=lucide spinner')
         ->assertSuccessful();
 });
 
@@ -364,10 +367,15 @@ it('installs nothing when no set is picked', function () {
     expect(File::exists(TestCase::iconPath()))->toBeFalse();
 });
 
-it('publishes every named set into its own directory', function () {
-    // Two names for one fixture prefix, so the run exercises publishing twice
-    // without a Composer package behind either -- the same branch an application
-    // with its sets already installed takes.
+it('publishes the icons into the default set and no other', function () {
+    // Two names for one fixture prefix, so the run installs two sets without a
+    // Composer package behind either -- the same branch an application with its
+    // sets already installed takes.
+    //
+    // Only one of them gets icons. These names are the ones Shape's own views
+    // ask for, and those views ask without a `set` prop, so a copy in `fixture`
+    // would be artwork nothing renders until this application writes a call site
+    // for it -- and `shape:icon:add` is how it says so.
     config()->set('shape.icons.sets', ['fixture' => 'fixture', 'spare' => 'fixture']);
     config()->set('shape.icons.aliases', ['check' => 'check']);
 
@@ -378,8 +386,8 @@ it('publishes every named set into its own directory', function () {
 
     $path = TestCase::iconPath();
 
-    expect(File::exists($path.'/fixture/check.blade.php'))->toBeTrue()
-        ->and(File::exists($path.'/spare/check.blade.php'))->toBeTrue()
+    expect(File::exists($path.'/spare/check.blade.php'))->toBeTrue()
+        ->and(File::exists($path.'/fixture/check.blade.php'))->toBeFalse()
         // The forward belongs to the default set alone, which is what
         // <shape:icon name="check" /> resolves through.
         ->and(File::get($path.'/default/check.blade.php'))->toContain('shape-icon::spare.check');

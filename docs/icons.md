@@ -10,7 +10,8 @@ php artisan shape:icon:add check chevron-down spinner
 
 `php artisan shape:install` does both of those for you on a fresh install — it offers
 [Lucide and Heroicons](#the-sets-the-installer-offers), installs the ones you pick, and publishes
-the names Shape's own components render. Everything below is for the icons you add afterwards.
+the names Shape's own components render into the default set. Everything below is for the icons
+you add afterwards.
 
 ```blade
 <shape:icon name="check" />
@@ -348,15 +349,20 @@ its own components render:
 | Heroicons | `blade-ui-kit/blade-heroicons` | `outline`, `solid`, `mini`, `micro` |
 
 `shape:install` asks which of them you want, and which Heroicons weights — they are four
-directories of the same icons drawn differently, so it is worth picking. Take both libraries and
-it asks which one is the default; take one and that one is. The answer is written into
-`config/shape.php`, and it is the only thing about your choice that has to be recorded, because
-those set names resolve to their prefixes whether or not `icons.sets` lists them.
+spellings of the same icons, so it is worth picking. Take both libraries and it asks which one is
+the default; take one and that one is. The answer is written into `config/shape.php`, and it is
+the only thing about your choice that has to be recorded, because those set names resolve to
+their prefixes whether or not `icons.sets` lists them.
 
 ```bash
 php artisan shape:install                                             # pick from the list
 php artisan shape:install --set=lucide --set=solid --default=solid     # or say so up front
 ```
+
+Every set you pick is installed; only the default one is published into. The names the installer
+publishes are the ones Shape's own components render, and those components ask for them without a
+`set` prop — so the same artwork in a second set would be a directory nothing renders from until
+you write a call site for it. When you do, `shape:icon:add --set=` is how you say so.
 
 Any other Blade Icons set works exactly as it always did — Shape maps onto sets, it does not
 supply them. Install the package, name the set in `icons.sets`, and add the names your components
@@ -449,8 +455,9 @@ which library you installed. The button's [loading state](components.md#button) 
 
 Nothing in your config says either of those. Shape ships the names for the libraries it can
 [install](#the-sets-the-installer-offers), one table per library, which is what lets
-`shape:install` publish two sets at once and get both right. `shape:install` publishes exactly
-these names, so a component's icon reaches your application without you being asked for it.
+`shape:icon:add --set=solid spinner` land the Heroicons artwork under Shape's name for it.
+`shape:install` publishes exactly these names into the default set, so a component's icon reaches
+your application without you being asked for it.
 
 `icons.aliases` is where you say something different. It is empty as shipped, and an entry in it
 wins for every set:
