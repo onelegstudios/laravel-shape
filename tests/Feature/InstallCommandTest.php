@@ -225,6 +225,57 @@ it('leaves the config unpublished when the answer is no', function () {
     expect(File::exists($this->config))->toBeFalse();
 });
 
+it('publishes the config without asking once the chosen set needs recording', function () {
+    // The console mock fails this test if the command asks, which is the point:
+    // `shape:icon` reads its default set from config and from nowhere else, so a
+    // no here would publish the icons under the set the run was just told not to
+    // use. There is no preference to act on, so there is no question.
+    config()->set('shape.icons.sets', ['fixture' => 'fixture', 'spare' => 'fixture']);
+    config()->set('shape.icons.aliases', ['check' => 'check']);
+
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    askingInstall(['--no-icons' => false, '--set' => ['fixture', 'spare']])
+        ->expectsChoice("Which set should Shape's own components use?", 'spare', [
+            'fixture' => 'fixture',
+            'spare' => 'spare',
+        ])
+        ->assertSuccessful();
+
+    expect(require $this->config)->toHaveKey('icons.set', 'spare');
+
+    expect(File::get(TestCase::iconPath().'/default/check.blade.php'))
+        ->toContain('shape-icon::spare.check');
+});
+
+it('still asks about the config when the chosen sets are what config already says', function () {
+    // Nothing to record, so the file is back to being optional -- component
+    // defaults and a set table that would only repeat itself -- and the question
+    // is back to being the plain one, asked after the sets rather than before.
+    config()->set('shape.icons.set', 'fixture');
+    config()->set('shape.icons.sets', ['fixture' => 'fixture']);
+    config()->set('shape.icons.aliases', ['check' => 'check']);
+
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    askingInstall(['--no-icons' => false, '--set' => ['fixture']])
+        ->expectsConfirmation('Publish the config file?', 'no')
+        ->assertSuccessful();
+
+    expect(File::exists($this->config))->toBeFalse()
+        ->and(File::exists(TestCase::iconPath().'/fixture/check.blade.php'))->toBeTrue();
+});
+
+it('asks about the config once when the icons are skipped', function () {
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    askingInstall(['--no-icons' => true])
+        ->expectsConfirmation('Publish the config file?', 'no')
+        ->assertSuccessful();
+
+    expect(File::exists($this->config))->toBeFalse();
+});
+
 it('does not ask about the config when there is nobody to answer', function () {
     File::put($this->stylesheet, '@import "tailwindcss";'."\n");
 
@@ -252,6 +303,161 @@ it('publishes the icons named in the alias table', function () {
         // Named for what Shape's views ask for, holding what the set calls it.
         ->and(File::exists($path.'/fixture/close.blade.php'))->toBeTrue()
         ->and(File::get($path.'/fixture/close.blade.php'))->toContain('fixture-cross');
+});
+
+it('asks which sets to install, which weights, and which one is the default', function () {
+    // Every question in one test because the three are one conversation: the
+    // weights question only exists because Heroicons was picked, and the default
+    // question only exists because the answers add up to more than one set.
+    //
+    // It ends by declining Composer, which is what keeps a test that names two
+    // real libraries from starting two real downloads.
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    askingInstall(['--no-icons' => false, '--config' => true])
+        ->expectsChoice('Which icon sets should Shape install?', ['lucide', 'heroicons'], [
+            'lucide' => 'Lucide',
+            'heroicons' => 'Heroicons',
+        ])
+        ->expectsChoice('Which Heroicons weights should Shape install?', ['solid'], [
+            'outline' => 'outline (heroicon-o)',
+            'solid' => 'solid (heroicon-s)',
+            'mini' => 'mini (heroicon-m)',
+            'micro' => 'micro (heroicon-c)',
+        ])
+        ->expectsChoice("Which set should Shape's own components use?", 'solid', [
+            'lucide' => 'lucide',
+            'solid' => 'solid',
+        ])
+        ->expectsConfirmation('Install mallardduck/blade-lucide-icons and blade-ui-kit/blade-heroicons for icons?', 'no')
+        ->expectsOutputToContain('composer require mallardduck/blade-lucide-icons blade-ui-kit/blade-heroicons')
+        ->expectsOutputToContain('shape:icon:add --set=lucide spinner')
+        ->expectsOutputToContain('shape:icon:add --set=solid spinner')
+        ->assertSuccessful();
+});
+
+it('does not ask which weights when the library ships one', function () {
+    // Lucide is single-weight, so there is nothing to narrow. The console mock
+    // fails this test if the command asks anyway, and the default question is
+    // gone for the same reason: one set is not a choice.
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    askingInstall(['--no-icons' => false, '--config' => true])
+        ->expectsChoice('Which icon sets should Shape install?', ['lucide'], [
+            'lucide' => 'Lucide',
+            'heroicons' => 'Heroicons',
+        ])
+        ->expectsConfirmation('Install mallardduck/blade-lucide-icons for icons?', 'no')
+        ->assertSuccessful();
+});
+
+it('installs nothing when no set is picked', function () {
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    askingInstall(['--no-icons' => false, '--config' => true])
+        ->expectsChoice('Which icon sets should Shape install?', [], [
+            'lucide' => 'Lucide',
+            'heroicons' => 'Heroicons',
+        ])
+        ->assertSuccessful();
+
+    expect(File::exists(TestCase::iconPath()))->toBeFalse();
+});
+
+it('publishes every named set into its own directory', function () {
+    // Two names for one fixture prefix, so the run exercises publishing twice
+    // without a Composer package behind either -- the same branch an application
+    // with its sets already installed takes.
+    config()->set('shape.icons.sets', ['fixture' => 'fixture', 'spare' => 'fixture']);
+    config()->set('shape.icons.aliases', ['check' => 'check']);
+
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    installShape(['--no-icons' => false, '--set' => ['fixture', 'spare'], '--default' => 'spare'])
+        ->assertSuccessful();
+
+    $path = TestCase::iconPath();
+
+    expect(File::exists($path.'/fixture/check.blade.php'))->toBeTrue()
+        ->and(File::exists($path.'/spare/check.blade.php'))->toBeTrue()
+        // The forward belongs to the default set alone, which is what
+        // <shape:icon name="check" /> resolves through.
+        ->and(File::get($path.'/default/check.blade.php'))->toContain('shape-icon::spare.check');
+});
+
+it('records the chosen sets in a config file it published itself', function () {
+    config()->set('shape.icons.sets', ['fixture' => 'fixture', 'spare' => 'fixture']);
+    config()->set('shape.icons.aliases', ['check' => 'check']);
+
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    installShape(['--no-icons' => false, '--set' => ['fixture', 'spare'], '--default' => 'spare'])
+        ->assertSuccessful();
+
+    // Publishing was never asked about here: recording the answer needs
+    // somewhere to put it, and a file that did not exist is not a file anyone is
+    // attached to.
+    expect(File::get($this->config))
+        ->toContain("'set' => 'spare',")
+        ->toContain("'fixture' => 'fixture',")
+        ->toContain("'spare' => 'fixture',")
+        // Still the shipped file, comments and all.
+        ->toContain('Where `shape:icon` writes published icons');
+
+    // And it is still PHP that says what it looks like it says.
+    expect(require $this->config)->toHaveKey('icons.set', 'spare');
+});
+
+it('leaves a config it did not publish alone and prints the change', function () {
+    // The line every other step of this command holds: a file that was already
+    // there is somebody's work. It may be reordered, commented, or generated,
+    // and none of those survive a rewrite done from a pattern.
+    config()->set('shape.icons.sets', ['fixture' => 'fixture', 'spare' => 'fixture']);
+    config()->set('shape.icons.aliases', ['check' => 'check']);
+
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+    File::put($this->config, "<?php\n\nreturn ['icons' => ['set' => 'fixture']];\n");
+
+    $before = File::get($this->config);
+
+    installShape(['--no-icons' => false, '--set' => ['fixture', 'spare'], '--default' => 'spare'])
+        ->expectsOutputToContain("'set' => 'spare',")
+        ->expectsOutputToContain("'sets' => ['fixture' => 'fixture', 'spare' => 'fixture'],")
+        ->assertSuccessful();
+
+    expect(File::get($this->config))->toBe($before)
+        // The icons still went in, under the set the run was told to use: the
+        // config is where the choice outlives this process, not where it works.
+        ->and(File::get(TestCase::iconPath().'/default/check.blade.php'))
+        ->toContain('shape-icon::spare.check');
+});
+
+it('writes nothing to config when the choice is what config already says', function () {
+    config()->set('shape.icons.set', 'fixture');
+    config()->set('shape.icons.sets', ['fixture' => 'fixture']);
+    config()->set('shape.icons.aliases', ['check' => 'check']);
+
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    installShape(['--no-icons' => false, '--set' => ['fixture']])->assertSuccessful();
+
+    expect(File::exists($this->config))->toBeFalse();
+});
+
+it('fails when --default names a set that is not being installed', function () {
+    // A scripted contradiction, and the one worth stopping for: the default set
+    // is the only one that gets forwards, so honouring a name with no icons
+    // behind it would finish successfully and render nothing.
+    config()->set('shape.icons.sets', ['fixture' => 'fixture']);
+    config()->set('shape.icons.aliases', ['check' => 'check']);
+
+    File::put($this->stylesheet, '@import "tailwindcss";'."\n");
+
+    installShape(['--no-icons' => false, '--set' => ['fixture'], '--default' => 'spare'])
+        ->expectsOutputToContain('--default names [spare]')
+        ->assertFailed();
+
+    expect(File::exists(TestCase::iconPath()))->toBeFalse();
 });
 
 it('publishes no icons under --no-icons', function () {

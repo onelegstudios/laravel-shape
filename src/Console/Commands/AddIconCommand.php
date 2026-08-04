@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use Onelegstudios\Shape\Console\Commands\Concerns\InteractsWithPublishedIcons;
+use Onelegstudios\Shape\Console\Commands\Concerns\ResolvesIconNames;
 use Onelegstudios\Shape\Console\Commands\Concerns\WritesIconComponents;
 
 use function Laravel\Prompts\select;
@@ -40,6 +41,7 @@ use function Laravel\Prompts\suggest;
 class AddIconCommand extends Command
 {
     use InteractsWithPublishedIcons;
+    use ResolvesIconNames;
     use WritesIconComponents;
 
     /**
@@ -65,7 +67,6 @@ class AddIconCommand extends Command
         $config = (array) config('shape.icons');
 
         $sets = array_filter((array) ($config['sets'] ?? []), 'is_string');
-        $aliases = array_filter((array) ($config['aliases'] ?? []), 'is_string');
 
         $default = is_string($config['set'] ?? null) ? $config['set'] : 'lucide';
 
@@ -78,7 +79,11 @@ class AddIconCommand extends Command
 
         $set = $this->chosenSet($sets, $default, $asking);
 
-        $prefix = $sets[$set] ?? $set;
+        // Both resolve through config first and the packaged registry second, so
+        // a set Shape knows brings its own names along and a set it does not is
+        // read exactly as it was before the registry existed.
+        $prefix = $this->prefixFor($sets, $set);
+        $aliases = $this->aliasesFor($config, $set);
 
         $path = $this->iconPath($config);
 

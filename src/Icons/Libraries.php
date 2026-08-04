@@ -1,0 +1,152 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Onelegstudios\Shape\Icons;
+
+/**
+ * The icon libraries `shape:install` can install, and what each one calls the
+ * icons Shape's own components render.
+ *
+ * Shape still ships no icons and still requires no set. What it does know is the
+ * part a consumer cannot reasonably be expected to: that the loading spinner is
+ * `loader-circle` in Lucide and `arrow-path` in Heroicons. Leaving that in
+ * `config/shape.php` alone meant the installer could only ever offer the one
+ * library the shipped file happened to name -- choosing another published
+ * nothing until somebody knew which names to remap by hand.
+ *
+ * So this is the naming layer's factory setting. `icons.sets` and
+ * `icons.aliases` are read first and win where they say anything, which keeps
+ * config the place an application states what it wants; this fills the silence
+ * for the libraries Shape knows, and a library it does not know still works
+ * exactly as it did -- as a prefix used as it stands.
+ *
+ * A library contributes one or more *set names*. Lucide is single-weight and
+ * contributes one. Heroicons keeps its weight in the filename, so one Composer
+ * package contributes four set names pointing into the same Blade Icons set --
+ * which is why the aliases sit on the library rather than on each set: all four
+ * weights draw from one icon list.
+ */
+final class Libraries
+{
+    /**
+     * The libraries the installer offers, in the order it offers them.
+     *
+     * @var array<string, array{label: string, package: string, sets: array<string, string>, aliases: array<string, string>}>
+     */
+    public const array KNOWN = [
+
+        'lucide' => [
+            'label' => 'Lucide',
+            'package' => 'mallardduck/blade-lucide-icons',
+            'sets' => [
+                'lucide' => 'lucide',
+            ],
+            // `loader-circle` is a single arc, so a plain rotation reads as
+            // movement at a glance -- rather than `loader`, whose evenly spaced
+            // spokes look nearly still while they turn.
+            'aliases' => [
+                'spinner' => 'loader-circle',
+            ],
+        ],
+
+        'heroicons' => [
+            'label' => 'Heroicons',
+            'package' => 'blade-ui-kit/blade-heroicons',
+            'sets' => [
+                'outline' => 'heroicon-o',
+                'solid' => 'heroicon-s',
+                'mini' => 'heroicon-m',
+                'micro' => 'heroicon-c',
+            ],
+            // Heroicons has no loader, so the spinner is `arrow-path`: the
+            // refresh arrows, which is the icon its own examples spin.
+            'aliases' => [
+                'spinner' => 'arrow-path',
+            ],
+        ],
+
+    ];
+
+    /**
+     * The Blade Icons name prefix a known set name maps to.
+     *
+     * Null rather than a fallback, so a caller can tell "Shape knows this name"
+     * apart from "use it as a prefix as it stands" and keep the second bargain
+     * where it already lives.
+     */
+    public static function prefix(string $set): ?string
+    {
+        foreach (self::KNOWN as $library) {
+            if (isset($library['sets'][$set])) {
+                return $library['sets'][$set];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The semantic names the library owning a set spells its own way.
+     *
+     * Empty for a set Shape does not know, which is the honest answer: an
+     * application's own set gets its names from `icons.aliases`, the same as it
+     * always did.
+     *
+     * @return array<string, string>
+     */
+    public static function aliases(string $set): array
+    {
+        foreach (self::KNOWN as $library) {
+            if (isset($library['sets'][$set])) {
+                return $library['aliases'];
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * The Composer package that installs the library a set comes from.
+     */
+    public static function package(string $set): ?string
+    {
+        foreach (self::KNOWN as $library) {
+            if (isset($library['sets'][$set])) {
+                return $library['package'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Every set name Shape knows, mapped to its prefix.
+     *
+     * @return array<string, string>
+     */
+    public static function sets(): array
+    {
+        $sets = [];
+
+        foreach (self::KNOWN as $library) {
+            $sets = [...$sets, ...$library['sets']];
+        }
+
+        return $sets;
+    }
+
+    /**
+     * The library a known set name belongs to.
+     */
+    public static function library(string $set): ?string
+    {
+        foreach (self::KNOWN as $name => $library) {
+            if (isset($library['sets'][$set])) {
+                return $name;
+            }
+        }
+
+        return null;
+    }
+}

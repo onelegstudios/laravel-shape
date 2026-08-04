@@ -60,6 +60,37 @@ it('publishes the alias the package ships', function () {
     expect(File::get($this->iconPath.'/lucide/spinner.blade.php'))->toContain('lucide-loader-circle');
 });
 
+it('spells a shipped alias the way the set being published spells it', function () {
+    // Nothing in config says either of these. `spinner` is one name to a view
+    // and two icons to the libraries, which is the whole reason the packaged
+    // table is per set rather than one entry an installer has to rewrite.
+    publishIcon(['name' => ['spinner']])->assertSuccessful();
+    publishIcon(['name' => ['spinner'], '--set' => 'outline'])->assertSuccessful();
+
+    expect(File::get($this->iconPath.'/lucide/spinner.blade.php'))->toContain('lucide-loader-circle')
+        ->and(File::get($this->iconPath.'/outline/spinner.blade.php'))->toContain('heroicon-o-arrow-path');
+});
+
+it('resolves a set name the packaged table knows without config listing it', function () {
+    // `icons.sets` still says only `lucide`, so the prefix came from the
+    // registry -- which is what lets `shape:install` publish a second set
+    // without editing a config file first.
+    publishIcon(['name' => ['check'], '--set' => 'solid'])->assertSuccessful();
+
+    expect(File::get($this->iconPath.'/solid/check.blade.php'))->toContain('heroicon-s-check');
+});
+
+it('lets config repoint a name the packaged table already spells', function () {
+    // An entry in config is somebody saying what they mean, so it wins over the
+    // packaged one for every set -- including a set the package knows better.
+    config()->set('shape.icons.aliases', ['spinner' => 'arrow-path-rounded-square']);
+
+    publishIcon(['name' => ['spinner'], '--set' => 'outline'])->assertSuccessful();
+
+    expect(File::get($this->iconPath.'/outline/spinner.blade.php'))
+        ->toContain('heroicon-o-arrow-path-rounded-square');
+});
+
 it('records a stamp in the file it writes', function () {
     // What `shape:icon:check` reads back to tell a hand edit from a set that has
     // moved. A published file with no stamp can only be compared on its artwork.

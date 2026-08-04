@@ -8,8 +8,9 @@ composer require mallardduck/blade-lucide-icons
 php artisan shape:icon:add check chevron-down spinner
 ```
 
-`php artisan shape:install` does both of those for you on a fresh install, publishing every name
-in the alias table. Everything below is for the icons you add afterwards.
+`php artisan shape:install` does both of those for you on a fresh install — it offers
+[Lucide and Heroicons](#the-sets-the-installer-offers), installs the ones you pick, and publishes
+the names Shape's own components render. Everything below is for the icons you add afterwards.
 
 ```blade
 <shape:icon name="check" />
@@ -63,7 +64,7 @@ php artisan shape:icon:add check --no-clear         # leave compiled views alone
 
 | Option | What it does |
 | --- | --- |
-| `--set=` | Which configured set to take the icons from. Defaults to `icons.set`. |
+| `--set=` | Which set to take the icons from. Defaults to `icons.set`. |
 | `--all` | Publish every icon the set contains, instead of naming them. |
 | `--no-clear` | Skip the compiled-view clear, for scripting many publishes before one clear. |
 
@@ -334,8 +335,36 @@ The `set` prop names a set; `config/shape.php` decides which library that is:
 ```
 
 That indirection is still the point, it just resolves when you publish rather than when you
-render. Views say `set="solid"`; config says what `solid` means. Swapping Lucide for Heroicons,
-start to finish:
+render. Views say `set="solid"`; config says what `solid` means.
+
+### The Sets the Installer Offers
+
+Shape knows two libraries well enough to install them, and knows what each one calls the icons
+its own components render:
+
+| Library | Composer package | Set names |
+| --- | --- | --- |
+| Lucide | `mallardduck/blade-lucide-icons` | `lucide` |
+| Heroicons | `blade-ui-kit/blade-heroicons` | `outline`, `solid`, `mini`, `micro` |
+
+`shape:install` asks which of them you want, and which Heroicons weights — they are four
+directories of the same icons drawn differently, so it is worth picking. Take both libraries and
+it asks which one is the default; take one and that one is. The answer is written into
+`config/shape.php`, and it is the only thing about your choice that has to be recorded, because
+those set names resolve to their prefixes whether or not `icons.sets` lists them.
+
+```bash
+php artisan shape:install                                             # pick from the list
+php artisan shape:install --set=lucide --set=solid --default=solid     # or say so up front
+```
+
+Any other Blade Icons set works exactly as it always did — Shape maps onto sets, it does not
+supply them. Install the package, name the set in `icons.sets`, and add the names your components
+use to `icons.aliases`.
+
+### Swapping One For Another
+
+Swapping Lucide for Heroicons after the fact, start to finish:
 
 ```bash
 composer remove mallardduck/blade-lucide-icons
@@ -357,6 +386,13 @@ php artisan vendor:publish --tag="shape-config"
 ```bash
 php artisan shape:icon:remove --all --set=lucide --force
 php artisan shape:icon:add --all
+```
+
+Or, for the two libraries Shape knows, the same swap as one command and no config editing:
+
+```bash
+php artisan shape:install --set=outline --no-css
+php artisan shape:icon:remove --all --set=lucide --force
 ```
 
 The old set goes first because the artwork in it is now from a library you no longer have, and
@@ -404,28 +440,35 @@ php artisan vendor:publish --tag=blade-icons
 
 Shape's own components can't name `loader-circle` or `arrow-path` directly — the package has no idea
 which library you installed. The button's [loading state](components.md#button) asks for
-`spinner`, and `config/shape.php` maps it:
+`spinner`, and the set it is published from decides what that means:
+
+```blade
+<shape:icon name="spinner" />                  {{-- lucide-loader-circle --}}
+<shape:icon name="spinner" set="solid" />      {{-- heroicon-s-arrow-path --}}
+```
+
+Nothing in your config says either of those. Shape ships the names for the libraries it can
+[install](#the-sets-the-installer-offers), one table per library, which is what lets
+`shape:install` publish two sets at once and get both right. `shape:install` publishes exactly
+these names, so a component's icon reaches your application without you being asked for it.
+
+`icons.aliases` is where you say something different. It is empty as shipped, and an entry in it
+wins for every set:
 
 ```php
 'aliases' => [
-    'spinner' => 'loader-circle',   // Heroicons calls this 'arrow-path'
+    'spinner' => 'loader-pinwheel',   // instead of the name Shape ships
+    'close' => 'x',                   // your own name, for your own call sites
 ],
 ```
 
-The table holds one entry per icon a Shape component renders, and `shape:install` publishes
-exactly those names — so a component's icon reaches your application without you being asked
-for it, and repointing one is a config edit rather than a fork.
+That one table covers every set, which is worth knowing if you publish two libraries at once: a
+name spelled Lucide's way stops resolving in a Heroicons directory. Leave the shipped names to
+the shipped table and put only your own here.
 
-Your own names belong here too. Alias `close` to `x` and every call site can write
+Your own names are the ordinary use for it. Alias `close` to `x` and every call site can write
 `<shape:icon name="close" />`, which survives the day you swap Lucide for a library that calls
-it `x-mark`:
-
-```php
-'aliases' => [
-    'spinner' => 'loader-circle',
-    'close' => 'x',
-],
-```
+it `x-mark`.
 
 Aliases resolve when an icon is published, and the file is named for what your views ask for
 rather than what the set calls it: `php artisan shape:icon:add close` writes `close.blade.php`

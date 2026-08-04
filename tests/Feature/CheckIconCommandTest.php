@@ -240,6 +240,22 @@ it('checks every published set without being asked which one', function () {
         ->assertSuccessful();
 });
 
+it('reads each set with its own names when two libraries are published', function () {
+    // The sweep is the place a single alias table would show: `spinner` is one
+    // name to a view and two icons to the libraries, so a report that resolved
+    // both directories the same way would call one of them out of date on every
+    // run and send somebody chasing an update that changes nothing.
+    stageIcon(['name' => ['spinner']])->assertSuccessful();
+    stageIcon(['name' => ['spinner'], '--set' => 'outline'])->assertSuccessful();
+
+    checkIcons()
+        ->expectsOutputToContain('lucide/spinner')
+        ->expectsOutputToContain('outline/spinner')
+        ->doesntExpectOutputToContain('update available')
+        ->doesntExpectOutputToContain('missing from set')
+        ->assertSuccessful();
+});
+
 it('narrows the report to the named set', function () {
     config()->set('shape.icons.sets', ['lucide' => 'lucide', 'fixture' => 'fixture']);
 

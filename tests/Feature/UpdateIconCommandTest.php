@@ -121,6 +121,19 @@ it('picks up a set whose prefix now points at another library', function () {
     expect(File::get($this->iconPath.'/lucide/check.blade.php'))->toContain('data-fixture="check"');
 });
 
+it('refreshes a set against the names its own library uses', function () {
+    // Published from the packaged table, so it has to be refreshed from the same
+    // one: resolving `spinner` Lucide's way in a Heroicons directory would
+    // report it missing from the set and leave the file to rot.
+    seedIcon(['name' => ['spinner'], '--set' => 'outline'])->assertSuccessful();
+
+    updateIcon(['name' => ['spinner'], '--set' => 'outline'])
+        ->doesntExpectOutputToContain('missing from set')
+        ->assertSuccessful();
+
+    expect(File::get($this->iconPath.'/outline/spinner.blade.php'))->toContain('heroicon-o-arrow-path');
+});
+
 it('overwrites a hand-edited file, because that is the whole verb', function () {
     seedIcon(['name' => ['check']])->assertSuccessful();
 
