@@ -56,3 +56,15 @@ it('names an icon each installed set actually has', function (string $set) {
 
     expect(Libraries::aliases($set))->not->toBeEmpty();
 })->with(['lucide', 'outline', 'solid', 'mini', 'micro']);
+
+it('lists the names Shape asks for once, whichever library spells them', function () {
+    // The keys, not what they resolve to: the published file is named for the
+    // name that asked for it, so both libraries contribute the same one entry.
+    expect(Libraries::required())->toBe(['spinner']);
+});
+
+it('lists a name from every library it knows', function () {
+    foreach (Libraries::KNOWN as $library) {
+        expect(Libraries::required())->toContain(...array_keys($library['aliases']));
+    }
+});

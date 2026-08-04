@@ -124,13 +124,14 @@ php artisan shape:icon:remove check --set=solid      # from a particular set
 php artisan shape:icon:remove --all                  # everything published in the set
 php artisan shape:icon:remove --all --force          # ...without being asked first
 php artisan shape:icon:remove                        # pick them interactively
+php artisan shape:icon:remove spinner --force        # an icon Shape's own components render
 ```
 
 | Option | What it does |
 | --- | --- |
 | `--set=` | Which published set to remove from. Defaults to the only one, or to `icons.set`. |
 | `--all` | Remove every icon published in the set, instead of naming them. |
-| `--force` | Answer the `--all` confirmation, for runs with nobody to ask. |
+| `--force` | Remove the icons Shape's own components render, and answer the `--all` confirmation. |
 | `--no-clear` | Skip the compiled-view clear, for scripting many removals before one clear. |
 
 **Name the file, not the icon.** Aliases are not resolved here, because they were resolved when
@@ -159,6 +160,39 @@ php artisan shape:icon:remove --all
 
 `--force` answers it. A scripted `--all` **must** pass `--force` and fails without it, rather than
 letting an unanswerable prompt fall back to its default and report success having removed nothing.
+
+### The Icons Shape Renders
+
+A few names are not yours to lose by accident: the [semantic names](#semantic-names) Shape's own
+components ask for, which `shape:install` publishes unasked so those components have artwork. Today
+that is `spinner`, which the button's loading state renders. Removing it does not leave you short of
+an icon you chose — it leaves a button rendering nothing mid-submit.
+
+So they are held back from every route into the command. `--all` sweeps around them, the prompt
+does not offer them, and naming one outright is refused:
+
+```
+php artisan shape:icon:remove spinner
+
+  lucide/spinner ......................................... kept
+
+   Removed 0 icon(s) from resources/views/vendor/shape-icons.
+   Kept 1 icon(s) Shape's own components render. Pass --force to remove them.
+```
+
+That run **fails**, so a script that asked for the spinner finds out it did not get it. Other names
+in the same run are still removed — the refusal is about the one name, not the whole instruction.
+
+`--force` is the way past all three. An application that renders its own spinner, or has stopped
+using the button, is entitled to say the package is wrong about what it needs:
+
+```bash
+php artisan shape:icon:remove spinner --force
+php artisan shape:icon:remove --all --force    # sweeps them too
+```
+
+Only the shipped names are held back. Your own `icons.aliases` entries are your vocabulary for your
+own call sites, and `shape:icon:remove close` takes `close.blade.php` away like any other file.
 
 Naming nothing asks which icons should go, as one list rather than the repeated question adding
 asks. The two are choosing from different things: a set holds two thousand names and can only be
@@ -457,7 +491,9 @@ Nothing in your config says either of those. Shape ships the names for the libra
 [install](#the-sets-the-installer-offers), one table per library, which is what lets
 `shape:icon:add --set=solid spinner` land the Heroicons artwork under Shape's name for it.
 `shape:install` publishes exactly these names into the default set, so a component's icon reaches
-your application without you being asked for it.
+your application without you being asked for it — and [`shape:icon:remove` holds them
+back](#the-icons-shape-renders) unless you pass `--force`, so a sweep of the set does not leave a
+shipped component with nothing to render.
 
 `icons.aliases` is where you say something different. It is empty as shipped, and an entry in it
 wins for every set:
