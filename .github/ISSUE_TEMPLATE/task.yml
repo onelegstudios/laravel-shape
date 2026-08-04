@@ -1,0 +1,68 @@
+name: Task
+description: Track a planned piece of work on the package.
+title: "[Task]: "
+labels: ["task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for planned work: features, refactors, documentation, tooling. To report something that is broken, use the bug report instead.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the work to be done and why it is worth doing.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the package does this touch?
+      options:
+        - Components and views
+        - Service provider and wiring
+        - Config and published resources
+        - Documentation
+        - Tests
+        - CI and compatibility
+        - Release tooling
+        - Other
+    validations:
+      required: false
+
+  - type: dropdown
+    id: change-type
+    attributes:
+      label: Change Type
+      description: The release notes category the resulting pull request should be labelled with.
+      options:
+        - enhancement
+        - bug
+        - documentation
+        - maintenance
+        - dependencies
+        - breaking
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Checklist
+      description: Break the work into steps if it helps.
+      placeholder: |
+        - [ ] First step
+        - [ ] Second step
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Add related issues, pull requests, or references.
+    validations:
+      required: false
