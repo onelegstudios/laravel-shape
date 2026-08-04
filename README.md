@@ -50,7 +50,8 @@ component classes are actually generated. Skip it and the components render unst
 
 Icons are published into your application rather than resolved on every render, so the installer
 also installs an icon set. It offers Lucide and Heroicons, takes either or both, asks which one
-Shape's own components should use when you take both, and publishes the names they ask for:
+Shape's own components should use when you take both, and publishes the names they ask for into
+that set:
 
 ```bash
 composer require mallardduck/blade-lucide-icons

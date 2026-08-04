@@ -490,17 +490,20 @@ class InstallCommand extends Command
         // asked here, ahead of the Composer download below.
         $this->config($files, $this->recordable($sets, $default) ? $default : null);
 
-        // One list per set, because the packaged names differ between libraries:
-        // `spinner` is Lucide's `loader-circle` and Heroicons' `arrow-path`, and
-        // the alias table is what knows that. Config's own entries ride along,
-        // so an application that has added names to it gets its own list too.
-        $names = [];
+        // One list, for the default set alone. These are the names Shape's own
+        // views ask for, and they ask without a `set` prop -- the button's
+        // spinner resolves through the default set and nowhere else, so the same
+        // names in a second set would be artwork nothing renders, published on a
+        // guess about call sites that do not exist yet. The other sets are still
+        // installed; what your own views want from them is `shape:icon:add`.
+        //
+        // Read from the alias table rather than named here, because the packaged
+        // spelling differs between libraries: `spinner` is Lucide's
+        // `loader-circle` and Heroicons' `arrow-path`. Config's own entries ride
+        // along, so an application that has added names to it gets those too.
+        $names = array_map(strval(...), array_keys($this->aliasesFor($config, $default)));
 
-        foreach ($sets as $set) {
-            $names[$set] = array_map(strval(...), array_keys($this->aliasesFor($config, $set)));
-        }
-
-        if (array_filter($names) === []) {
+        if ($names === []) {
             return true;
         }
 
@@ -512,10 +515,7 @@ class InstallCommand extends Command
             if (! $this->wanted($packages)) {
                 $this->components->warn('Skipped the icon sets. To finish by hand:');
                 $this->line('  <fg=gray>composer require '.implode(' ', $packages).'</>');
-
-                foreach ($names as $set => $list) {
-                    $this->line("  <fg=gray>php artisan shape:icon:add --set={$set} ".implode(' ', $list).'</>');
-                }
+                $this->line("  <fg=gray>php artisan shape:icon:add --set={$default} ".implode(' ', $names).'</>');
 
                 return true;
             }
@@ -525,9 +525,7 @@ class InstallCommand extends Command
             if (! $composer->requirePackages($packages, false, $this->output)) {
                 $this->components->error('Could not install '.implode(' and ', $packages).'.');
 
-                foreach ($names as $set => $list) {
-                    $this->manually($set, $list);
-                }
+                $this->manually($default, $names);
 
                 return true;
             }
@@ -540,7 +538,13 @@ class InstallCommand extends Command
         // afterwards would be a choice that run never saw.
         $this->record($files, $sets, $default);
 
-        $this->publishIcons($names, $fresh, $files);
+        $published = $fresh
+            ? $this->afterInstalling($default, $names, $files)
+            : $this->inProcess($default, $names);
+
+        if (! $published) {
+            $this->manually($default, $names);
+        }
 
         return true;
     }
@@ -595,9 +599,9 @@ class InstallCommand extends Command
      * Which of a library's sets to install.
      *
      * A single-weight library is not a question. Heroicons keeps its weight in
-     * the filename and ships four, which is a genuine choice: they are four
-     * directories of the same icons drawn differently, and publishing all four
-     * unasked would quadruple a directory somebody has to read.
+     * the filename and ships four, which is a genuine choice: they are the same
+     * icons drawn differently, and taking all four unasked would write four set
+     * names into config that nobody picked between.
      *
      * @return array<int, string>
      */
@@ -630,9 +634,10 @@ class InstallCommand extends Command
      * Which set Shape's own components render.
      *
      * Null when `--default` names a set that is not being installed, which is
-     * the one contradiction worth stopping for: the default set is the only one
-     * that gets the `default/` forwards, so honouring a name that has no icons
-     * behind it would finish successfully and render nothing.
+     * the one contradiction worth stopping for: this is the set the icons are
+     * published from and the only one that gets the `default/` forwards, so
+     * honouring a name with no package behind it would finish successfully and
+     * render nothing.
      *
      * @param  array<int, string>  $sets
      */
@@ -938,36 +943,7 @@ class InstallCommand extends Command
     }
 
     /**
-     * Publish each set's icons, in the set's own directory.
-     *
-     * @param  array<string, array<int, string>>  $names
-     */
-    private function publishIcons(array $names, bool $fresh, Filesystem $files): void
-    {
-        $last = array_key_last($names);
-
-        foreach ($names as $set => $list) {
-            if ($list === []) {
-                continue;
-            }
-
-            // One clear at the end rather than one per set: the compiled views
-            // are a single directory, and clearing it four times over is three
-            // more than the work needs.
-            $clear = $set === $last;
-
-            $published = $fresh
-                ? $this->afterInstalling((string) $set, $list, $clear, $files)
-                : $this->inProcess((string) $set, $list, $clear);
-
-            if (! $published) {
-                $this->manually((string) $set, $list);
-            }
-        }
-    }
-
-    /**
-     * Publish a set's icons after installing the package that holds them.
+     * Publish the set's icons after installing the package that holds them.
      *
      * This process cannot do it. `composer require` writes the package to disk,
      * but its service provider was never registered here and its autoload
@@ -978,7 +954,7 @@ class InstallCommand extends Command
      *
      * @param  array<int, string>  $names
      */
-    private function afterInstalling(string $set, array $names, bool $clear, Filesystem $files): bool
+    private function afterInstalling(string $set, array $names, Filesystem $files): bool
     {
         $artisan = $this->absolute(artisan_binary());
 
@@ -992,7 +968,6 @@ class InstallCommand extends Command
                 $artisan,
                 'shape:icon:add',
                 '--set='.$set,
-                ...($clear ? [] : ['--no-clear']),
                 ...$names,
             ],
             base_path(),
@@ -1012,7 +987,7 @@ class InstallCommand extends Command
     }
 
     /**
-     * Publish a set's icons in this process, for a package already installed.
+     * Publish the set's icons in this process, for a package already installed.
      *
      * `shape:icon:add` owns everything about writing an icon -- the alias
      * resolution, the default-set forwards, the refusal to overwrite, the
@@ -1021,15 +996,9 @@ class InstallCommand extends Command
      *
      * @param  array<int, string>  $names
      */
-    private function inProcess(string $set, array $names, bool $clear): bool
+    private function inProcess(string $set, array $names): bool
     {
-        $arguments = ['name' => $names, '--set' => $set];
-
-        if (! $clear) {
-            $arguments['--no-clear'] = true;
-        }
-
-        return $this->call(AddIconCommand::class, $arguments) === self::SUCCESS;
+        return $this->call(AddIconCommand::class, ['name' => $names, '--set' => $set]) === self::SUCCESS;
     }
 
     /**

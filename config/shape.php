@@ -100,8 +100,8 @@ return [
         // call these: the button's loading state asks for `spinner`, which is
         // `loader-circle` in Lucide and `arrow-path` in Heroicons, and
         // `shape:icon:add` reads that from the set it is publishing from. Those
-        // names are also the ones `shape:install` publishes unasked, so a fresh
-        // install needs nothing here at all.
+        // names are also the ones `shape:install` publishes unasked, into the
+        // default set alone, so a fresh install needs nothing here at all.
         //
         // What belongs here is your own vocabulary, and any packaged name you
         // would rather point somewhere else:
