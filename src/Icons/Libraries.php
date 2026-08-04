@@ -137,6 +137,43 @@ final class Libraries
     }
 
     /**
+     * The names Shape's own components render, whichever library is installed.
+     *
+     * The alias keys rather than what they resolve to, because a published icon
+     * is named for the name that asked for it: the button's spinner is
+     * `spinner.blade.php` on disk whether its artwork came from `loader-circle`
+     * or `arrow-path`, and that file name is what a remove has to be checked
+     * against.
+     *
+     * One flat list across every library rather than a list per set, because the
+     * component asks without a `set` prop -- `<shape:icon name="spinner" />`
+     * resolves through whichever set `default/` forwards at, which can move after
+     * the icon was published. A name is either one Shape's views ask for or it is
+     * not; which directory a copy of it sits in does not change the answer.
+     *
+     * Config's own aliases are deliberately not here. Those are an application's
+     * vocabulary for its own call sites, and it can take them back out whenever
+     * it likes -- what this protects is the promise the package made, that a
+     * shipped component has something to render.
+     *
+     * @return array<int, string>
+     */
+    public static function required(): array
+    {
+        $names = [];
+
+        foreach (self::KNOWN as $library) {
+            $names = [...$names, ...array_keys($library['aliases'])];
+        }
+
+        $names = array_values(array_unique($names));
+
+        sort($names);
+
+        return $names;
+    }
+
+    /**
      * The library a known set name belongs to.
      */
     public static function library(string $set): ?string

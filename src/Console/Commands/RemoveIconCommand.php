@@ -7,6 +7,7 @@ namespace Onelegstudios\Shape\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Onelegstudios\Shape\Console\Commands\Concerns\InteractsWithPublishedIcons;
+use Onelegstudios\Shape\Icons\Libraries;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\multiselect;
@@ -32,6 +33,16 @@ use function Laravel\Prompts\multiselect;
  * Named icons are removed without ceremony -- naming a file is as explicit as an
  * instruction gets. `--all` is the sweeping one, so it asks first, and a scripted
  * run has to say `--force` rather than have a prompt quietly answer itself.
+ *
+ * The exception is the handful of names Shape's own components render, which
+ * `Libraries::required()` lists. Those are not published because somebody asked
+ * for them -- `shape:install` puts them there so the shipped components have
+ * artwork -- so removing one does not leave the application short of an icon it
+ * chose, it leaves a button rendering nothing mid-submit. They are held back from
+ * every route into this command rather than one: not swept by `--all`, not
+ * offered by the prompt, and refused when named outright. `--force` is the way
+ * past all three, because an application that has stopped using the button, or
+ * that renders its own spinner, is owed a way to say so.
  */
 class RemoveIconCommand extends Command
 {
@@ -44,7 +55,7 @@ class RemoveIconCommand extends Command
         {name?* : Published icon names to remove; omit them to pick interactively}
         {--set= : Which published set to remove them from, defaulting to the configured default}
         {--all : Remove every icon published in the set}
-        {--force : Answer the --all confirmation, for runs with nobody to ask}
+        {--force : Remove the icons the shipped components render, and answer the --all confirmation}
         {--no-clear : Leave compiled views in place, for scripting many removals before one clear}';
 
     /**
@@ -94,18 +105,34 @@ class RemoveIconCommand extends Command
             return self::SUCCESS;
         }
 
+        // What is published minus what Shape's own components render, which is
+        // the list both the sweep and the prompt work from. Empty under --force,
+        // so every guard below turns itself off by having nothing to hold back.
+        $required = $this->option('force')
+            ? []
+            : array_values(array_intersect($available, Libraries::required()));
+
+        $removable = array_values(array_diff($available, $required));
+
+        if ($removable === [] && ($this->option('all') || $asking)) {
+            $this->components->info("Only icons Shape's own components render are published in [{$set}].");
+            $this->line('  <fg=gray>Pass --force to remove those too.</>');
+
+            return self::SUCCESS;
+        }
+
         if ($this->option('all')) {
-            $stopped = $this->confirmRemovingEverything($set, count($available));
+            $stopped = $this->confirmRemovingEverything($set, count($removable), count($required));
 
             if ($stopped !== null) {
                 return $stopped;
             }
 
-            $names = $available;
+            $names = $removable;
         }
 
         if ($asking) {
-            $names = $this->askForIcons($available);
+            $names = $this->askForIcons($removable, $required);
 
             // Selecting nothing is how the prompt is meant to be left, so it is
             // not the same as naming nothing on the command line.
@@ -124,8 +151,21 @@ class RemoveIconCommand extends Command
 
         $removed = 0;
         $skipped = 0;
+        $kept = 0;
 
         foreach ($names as $name) {
+            // Only ever a name typed on the command line: the sweep and the
+            // prompt were handed a list these were already out of. Reported
+            // rather than silently dropped for that reason -- an instruction
+            // this command declined to carry out is news.
+            if (in_array($name, $required, true)) {
+                $this->components->twoColumnDetail($set.'/'.$name, '<fg=yellow>kept</>');
+
+                $kept++;
+
+                continue;
+            }
+
             // Checked against the published listing rather than the filesystem
             // so a name can only ever address a file this command put there. It
             // is also what keeps a name out of the path it is about to build.
@@ -163,6 +203,15 @@ class RemoveIconCommand extends Command
             $this->components->warn("Left {$skipped} name(s) alone that were not published.");
         }
 
+        if ($kept > 0) {
+            $this->components->warn("Kept {$kept} icon(s) Shape's own components render. Pass --force to remove them.");
+
+            // A failure even when other names went, because the run did less
+            // than it was told to. A script that asked for the spinner and got
+            // an exit code of nought would have no way to find that out.
+            return self::FAILURE;
+        }
+
         return self::SUCCESS;
     }
 
@@ -173,7 +222,7 @@ class RemoveIconCommand extends Command
      * between removing everything and removing nothing -- so a run with no
      * terminal has to say `--force` out loud rather than be answered for.
      */
-    private function confirmRemovingEverything(string $set, int $count): ?int
+    private function confirmRemovingEverything(string $set, int $count, int $kept): ?int
     {
         if ($this->option('force')) {
             return null;
@@ -188,7 +237,12 @@ class RemoveIconCommand extends Command
         $confirmed = confirm(
             label: "Remove all {$count} published icon(s) from set [{$set}]?",
             default: false,
-            hint: 'They can be published again with `php artisan shape:icon:add`.',
+            // The count is already the sweep with Shape's own icons taken out,
+            // so the hint says which ones are staying rather than leaving "all"
+            // to mean something the next line quietly disagrees with.
+            hint: $kept > 0
+                ? "Keeps {$kept} icon(s) Shape's own components render; they can be published again with `php artisan shape:icon:add`."
+                : 'They can be published again with `php artisan shape:icon:add`.',
         );
 
         if (! $confirmed) {
@@ -208,15 +262,23 @@ class RemoveIconCommand extends Command
      * only be searched, where what you have published is short enough to read
      * and check off.
      *
+     * Shape's own icons are left off the list rather than shown and refused. A
+     * name you cannot pick is the clearer statement of the two, and the hint says
+     * where they went -- an option that rejects the selection afterwards teaches
+     * the same rule at the cost of a wasted answer.
+     *
      * @param  array<int, string>  $available
+     * @param  array<int, string>  $required
      * @return array<int, string>
      */
-    private function askForIcons(array $available): array
+    private function askForIcons(array $available, array $required): array
     {
         $chosen = multiselect(
             label: 'Which icons should be removed?',
             options: $available,
-            hint: 'Select none to remove nothing.',
+            hint: $required === []
+                ? 'Select none to remove nothing.'
+                : 'Select none to remove nothing. '.implode(', ', $required).' left out; --force lists them.',
         );
 
         return array_values(array_map(strval(...), $chosen));

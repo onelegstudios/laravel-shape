@@ -259,6 +259,82 @@ it('warns when the named set has nothing published in it', function () {
     expect(File::exists($this->iconPath.'/lucide/check.blade.php'))->toBeTrue();
 });
 
+it('refuses to remove an icon Shape\'s own components render', function () {
+    // `spinner` is not published because anyone asked for it -- `shape:install`
+    // puts it there so the button's loading state has artwork -- so removing it
+    // leaves a shipped component rendering nothing.
+    publish(['name' => ['spinner']])->assertSuccessful();
+
+    removeIcon(['name' => ['spinner']])
+        ->expectsOutputToContain('--force')
+        ->assertFailed();
+
+    expect(File::exists($this->iconPath.'/lucide/spinner.blade.php'))->toBeTrue()
+        ->and(File::exists($this->iconPath.'/default/spinner.blade.php'))->toBeTrue();
+});
+
+it('removes an icon Shape renders once --force says so', function () {
+    // An application that renders its own spinner, or has stopped using the
+    // button, is owed a way to say the package is wrong about what it needs.
+    publish(['name' => ['spinner']])->assertSuccessful();
+
+    removeIcon(['name' => ['spinner'], '--force' => true])->assertSuccessful();
+
+    expect(File::exists($this->iconPath.'/lucide/spinner.blade.php'))->toBeFalse();
+});
+
+it('carries out the rest of the names and still fails on the one it kept', function () {
+    publish(['name' => ['check', 'spinner']])->assertSuccessful();
+
+    removeIcon(['name' => ['check', 'spinner']])->assertFailed();
+
+    expect(File::exists($this->iconPath.'/lucide/check.blade.php'))->toBeFalse()
+        ->and(File::exists($this->iconPath.'/lucide/spinner.blade.php'))->toBeTrue();
+});
+
+it('leaves the icons Shape renders behind when --all sweeps the set', function () {
+    publish(['name' => ['check', 'spinner']])->assertSuccessful();
+
+    // One, not two: the count is the sweep as it will actually happen, so the
+    // confirmation is not asking about a file that is staying either way.
+    removeIcon(['--all' => true])
+        ->expectsConfirmation('Remove all 1 published icon(s) from set [lucide]?', 'yes')
+        ->assertSuccessful();
+
+    expect(File::exists($this->iconPath.'/lucide/check.blade.php'))->toBeFalse()
+        ->and(File::exists($this->iconPath.'/lucide/spinner.blade.php'))->toBeTrue();
+});
+
+it('sweeps the icons Shape renders too when --all is forced', function () {
+    publish(['name' => ['check', 'spinner']])->assertSuccessful();
+
+    removeIcon(['--all' => true, '--force' => true])->assertSuccessful();
+
+    expect(File::isDirectory($this->iconPath.'/lucide'))->toBeFalse();
+});
+
+it('does not offer the icons Shape renders in the prompt', function () {
+    // The options the mock is given are the assertion: a name that cannot be
+    // picked is a clearer statement than one that is refused after answering.
+    publish(['name' => ['check', 'spinner']])->assertSuccessful();
+
+    removeIcon()
+        ->expectsChoice('Which icons should be removed?', ['check'], ['check'])
+        ->assertSuccessful();
+
+    expect(File::exists($this->iconPath.'/lucide/spinner.blade.php'))->toBeTrue();
+});
+
+it('says so rather than asking when the only published icons are Shape\'s own', function () {
+    publish(['name' => ['spinner']])->assertSuccessful();
+
+    removeIcon(['--all' => true])
+        ->expectsOutputToContain('Only icons Shape\'s own components render are published in [lucide].')
+        ->assertSuccessful();
+
+    expect(File::exists($this->iconPath.'/lucide/spinner.blade.php'))->toBeTrue();
+});
+
 it('drops compiled views, including Blaze\'s own, once something is removed', function () {
     $compiled = sys_get_temp_dir().'/shape-compiled-'.bin2hex(random_bytes(4));
 
