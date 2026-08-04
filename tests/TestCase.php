@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Onelegstudios\Shape\Tests;
 
+use BladeUI\Heroicons\BladeHeroiconsServiceProvider;
 use BladeUI\Icons\BladeIconsServiceProvider;
 use BladeUI\Icons\Factory as IconFactory;
 use Livewire\Blaze\BlazeServiceProvider;
@@ -119,10 +120,16 @@ abstract class TestCase extends Orchestra
      * icon packages do: the shipped components carry `@blaze` directives, so a
      * suite without it would assert against a rendering path no consumer uses
      * and pass whatever Blaze happened to break.
+     *
+     * Both libraries `shape:install` offers are here because the packaged names
+     * differ between them -- `spinner` is `loader-circle` in one and `arrow-path`
+     * in the other -- and a table that says so is only worth asserting against
+     * the libraries it describes.
      */
     protected function getPackageProviders($app): array
     {
         return [
+            BladeHeroiconsServiceProvider::class,
             BladeIconsServiceProvider::class,
             BladeLucideIconsServiceProvider::class,
             BlazeServiceProvider::class,

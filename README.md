@@ -49,21 +49,24 @@ component classes are actually generated. Skip it and the components render unst
 [Theming](docs/theming.md) for what the theme defines and how to override it.
 
 Icons are published into your application rather than resolved on every render, so the installer
-also installs an icon set — Lucide is the one Shape's config points at out of the box — and
-publishes the names Shape's own components ask for:
+also installs an icon set. It offers Lucide and Heroicons, takes either or both, asks which one
+Shape's own components should use when you take both, and publishes the names they ask for:
 
 ```bash
 composer require mallardduck/blade-lucide-icons
 php artisan shape:icon:add spinner
 ```
 
-The set stays a package you own — swap or remove it with plain Composer, and re-publish. See
-[Icons](docs/icons.md) for sets, semantic names, and the rest of the commands.
+Each library spells those names its own way — the button's spinner is Lucide's `loader-circle`
+and Heroicons' `arrow-path` — and Shape knows which is which, so a set you pick works without a
+config edit. The set stays a package you own — swap or remove it with plain Composer, and
+re-publish. See [Icons](docs/icons.md) for sets, semantic names, and the rest of the commands.
 
 The installer takes flags for each of its steps, so it can run unattended:
 
 ```bash
 php artisan shape:install --no-interaction --icons
+php artisan shape:install --set=lucide --set=solid --default=solid
 php artisan shape:install --css=resources/css/theme.css --no-icons
 ```
 
@@ -72,8 +75,18 @@ php artisan shape:install --css=resources/css/theme.css --no-icons
 | `--css=` | The stylesheet the theme import is added to, instead of `resources/css/app.css` |
 | `--no-css` | Leave the stylesheet alone |
 | `--icons` | Install the configured set and publish the icons without asking |
+| `--set=` | Which sets to install, instead of asking. Repeat it for more than one |
+| `--default=` | Which of those sets Shape's own components render, when more than one is named |
 | `--no-icons` | Skip the icon set entirely |
 | `--config` | Publish `config/shape.php` without asking |
+
+Picking a set that `config/shape.php` does not already name writes the choice into that file,
+publishing it first if you have not — without asking, because there is nowhere else the choice can
+go: the icon commands read the default set from config, so a run that skipped the file would
+publish the icons under the set you just replaced. A config file that was already there is left
+exactly as it is, and the two lines to change are printed instead. You are only asked about the
+file when there is nothing to record in it, and then it is asked after the set questions, where it
+is a question about component defaults alone.
 
 You may publish all of the package's resources at once:
 

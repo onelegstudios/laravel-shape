@@ -80,38 +80,47 @@ return [
         // second set arrives the call sites are already speaking the right
         // language. A name that is not listed is passed through as a prefix
         // as-is, so `set="heroicon-o"` works without being registered first.
+        //
+        // Shape knows the set names of the libraries `shape:install` offers, so
+        // `outline`, `solid`, `mini` and `micro` resolve to their Heroicons
+        // prefixes whether or not they are listed here. The installer writes the
+        // ones you chose into this table anyway, because a table that says what
+        // is installed is the one worth reading.
         'sets' => [
             'lucide' => 'lucide',
         ],
 
         // Semantic names for the icons Shape's own components render. A component
         // asks for `close`, never for `x`, because the package cannot know which
-        // library an application installed -- so a consumer who swaps Lucide for
-        // Heroicons remaps a few names here instead of forking a view. Aliases
-        // resolve before the prefix is applied.
+        // library an application installed. Aliases resolve before the prefix is
+        // applied, and they resolve when an icon is published rather than when
+        // one renders.
         //
-        // One table covers every set rather than one per set. Shape's components
-        // render in the default set, which is the case this exists to serve; if
-        // you point a second set at a name that disagrees, spell it out at the
-        // call site, where the reader can see which set is in play.
+        // Empty, because Shape already knows what the libraries it can install
+        // call these: the button's loading state asks for `spinner`, which is
+        // `loader-circle` in Lucide and `arrow-path` in Heroicons, and
+        // `shape:icon:add` reads that from the set it is publishing from. Those
+        // names are also the ones `shape:install` publishes unasked, so a fresh
+        // install needs nothing here at all.
         //
-        // Only names Shape itself renders belong here. Everything else falls
-        // through untouched, so call sites keep using real icon names and this
-        // does not become a second vocabulary to learn.
+        // What belongs here is your own vocabulary, and any packaged name you
+        // would rather point somewhere else:
         //
-        // One entry per icon a Shape component actually renders, which is also the
-        // list `shape:install` publishes unasked -- adding a name here is how a
-        // component's icon reaches an application, and removing one is how a
-        // component that renders it starts failing.
+        //     'aliases' => [
+        //         'spinner' => 'loader-pinwheel',   // instead of the packaged one
+        //         'close' => 'x',                   // your own name
+        //     ],
         //
-        // The button's loading state is the only entry so far. It names Lucide's
-        // `loader-circle` -- a single arc, so a plain rotation reads as movement
-        // at a glance -- rather than `loader`, whose evenly spaced spokes look
-        // nearly still while they turn. Point it at any icon you would rather
-        // see and re-publish; the component is untouched either way, which is
-        // the whole point of the table.
+        // One table covers every set rather than one per set, and it wins over
+        // the packaged names for all of them -- an entry here is you saying what
+        // you mean. Which is worth knowing if you publish two libraries at once:
+        // a name spelled Lucide's way stops resolving in the Heroicons set, so
+        // leave those to the packaged table and put only your own names here.
+        //
+        // Everything else falls through untouched, so call sites keep using real
+        // icon names and this does not become a second vocabulary to learn.
         'aliases' => [
-            'spinner' => 'loader-circle',
+            //
         ],
 
     ],

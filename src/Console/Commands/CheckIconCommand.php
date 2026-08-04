@@ -9,6 +9,7 @@ use BladeUI\Icons\Factory as IconFactory;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Onelegstudios\Shape\Console\Commands\Concerns\InteractsWithPublishedIcons;
+use Onelegstudios\Shape\Console\Commands\Concerns\ResolvesIconNames;
 use Onelegstudios\Shape\Console\Commands\Concerns\WritesIconComponents;
 
 /**
@@ -45,6 +46,7 @@ use Onelegstudios\Shape\Console\Commands\Concerns\WritesIconComponents;
 class CheckIconCommand extends Command
 {
     use InteractsWithPublishedIcons;
+    use ResolvesIconNames;
     use WritesIconComponents;
 
     /**
@@ -73,7 +75,6 @@ class CheckIconCommand extends Command
         $config = (array) config('shape.icons');
 
         $sets = array_filter((array) ($config['sets'] ?? []), 'is_string');
-        $aliases = array_filter((array) ($config['aliases'] ?? []), 'is_string');
 
         $default = is_string($config['set'] ?? null) ? $config['set'] : 'lucide';
 
@@ -144,7 +145,12 @@ class CheckIconCommand extends Command
                 );
             }
 
-            $prefix = $sets[$set] ?? $set;
+            // Both inside the sweep, because both are per set: two directories
+            // published from two libraries spell the same semantic name
+            // differently, and one table for the pair would report the second
+            // set against the first one's artwork.
+            $prefix = $this->prefixFor($sets, $set);
+            $aliases = $this->aliasesFor($config, $set);
 
             foreach ($wanted as $name) {
                 $seen[$name] = true;

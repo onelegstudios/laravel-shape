@@ -23,6 +23,7 @@
         "livewire/blaze": "^1.0.13"
     },
     "require-dev": {
+        "blade-ui-kit/blade-heroicons": "^2.7",
         "larastan/larastan": "^3.9",
         "laravel/pao": "^1.0",
         "laravel/pint": "^1.29",
@@ -34,6 +35,7 @@
         "phpstan/extension-installer": "^1.4"
     },
     "suggest": {
+        "blade-ui-kit/blade-heroicons": "The other icon set shape:install offers (^2.7), in outline, solid, mini and micro. Install it directly so you can swap it with plain composer remove.",
         "mallardduck/blade-lucide-icons": "The icon set config points at out of the box (^1.26). Any Blade Icons set works; install it directly so you can swap it with plain composer remove."
     },
     "autoload": {

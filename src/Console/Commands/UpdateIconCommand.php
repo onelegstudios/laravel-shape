@@ -9,6 +9,7 @@ use BladeUI\Icons\Factory as IconFactory;
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Onelegstudios\Shape\Console\Commands\Concerns\InteractsWithPublishedIcons;
+use Onelegstudios\Shape\Console\Commands\Concerns\ResolvesIconNames;
 use Onelegstudios\Shape\Console\Commands\Concerns\WritesIconComponents;
 
 use function Laravel\Prompts\confirm;
@@ -44,6 +45,7 @@ use function Laravel\Prompts\multiselect;
 class UpdateIconCommand extends Command
 {
     use InteractsWithPublishedIcons;
+    use ResolvesIconNames;
     use WritesIconComponents;
 
     /**
@@ -75,7 +77,6 @@ class UpdateIconCommand extends Command
         $config = (array) config('shape.icons');
 
         $sets = array_filter((array) ($config['sets'] ?? []), 'is_string');
-        $aliases = array_filter((array) ($config['aliases'] ?? []), 'is_string');
 
         $default = is_string($config['set'] ?? null) ? $config['set'] : 'lucide';
 
@@ -145,7 +146,13 @@ class UpdateIconCommand extends Command
         // prefix, so the files can be refreshed after the set was dropped from
         // `icons.sets`. If the package is gone too, every icon comes back missing
         // and the summary says so -- which is the honest answer.
-        $prefix = $sets[$set] ?? $set;
+        $prefix = $this->prefixFor($sets, $set);
+
+        // Per set, and resolved this late because that is when the set is known.
+        // A directory named for a set Shape ships knowledge of picks up that
+        // library's names even from a config that never mentioned it, which is
+        // what lets `shape:install` publish a second set without editing one.
+        $aliases = $this->aliasesFor($config, $set);
 
         $updated = 0;
         $unchanged = 0;
