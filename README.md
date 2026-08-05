@@ -118,16 +118,17 @@ Shape components are available in your Blade views through the `shape:` tag pref
 ```blade
 <shape:button variant="solid" color="primary">Save changes</shape:button>
 
-<shape:button size="sm" variant="soft" color="neutral">
-    <shape:icon name="check" size="sm" />
-    Filter
-</shape:button>
+<shape:button size="sm" variant="soft" color="neutral" icon="check">Filter</shape:button>
 ```
 
 `variant` sets emphasis, `color` names a semantic role, and `size` sets density. Both button
 defaults are the quiet option (`outline` / `neutral`), so the prominent button on a screen is
 an explicit choice rather than the one you get by accident — and the defaults are configurable
 if that's the wrong starting point for your application.
+
+`icon` and `icon-trailing` put a published icon either side of the label, sized to the
+button's own rung so the two cannot drift apart. A button given an icon and no label squares
+up into an icon button — give that one an `aria-label`.
 
 ## Documentation
 
