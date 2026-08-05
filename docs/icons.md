@@ -524,7 +524,10 @@ this doesn't become a second vocabulary to learn.
 ## Size and Colour
 
 `size` uses the same four rungs as the button — `xs`, `sm`, `md`, `lg`, defaulting to `md` — so
-a `sm` icon in a `sm` button is the obvious thing to write rather than a lookup.
+a `sm` icon in a `sm` button is the obvious thing to write rather than a lookup. Better still,
+don't write it: the button's `icon` and `icon-trailing` props take a name and size the mark to
+the button's own rung, which is one fewer thing to keep in step. See
+[Components](components.md#button).
 
 The default is a literal in the component rather than a config value, for the same reason the
 set is resolved at publish time: a `config()` read would cost folding. A call site that wants
@@ -546,9 +549,14 @@ label that's already beside them. Pass `label` for the icon that *is* the conten
 icon-only button — and it renders as `role="img"` with an `aria-label` instead:
 
 ```blade
-<shape:button aria-label="Dismiss"><shape:icon name="close" /></shape:button>
-
 <shape:icon name="circle-x" color="danger" label="Failed" />
+```
+
+Inside a button, the name belongs on the button rather than on the mark, which is where
+assistive tech looks for it — so the icon stays hidden and `aria-label` goes on the tag:
+
+```blade
+<shape:button icon="close" aria-label="Dismiss" />
 ```
 
 The published files deliberately carry no accessibility attributes of their own. Blade's

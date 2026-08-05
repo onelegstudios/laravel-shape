@@ -53,6 +53,50 @@ return [
             ]),
         ],
         [
+            // The icon is not sized anywhere in this row. The button resolved its
+            // rung once and handed it over, which is the whole reason this is a
+            // prop rather than a nested component: the pair cannot drift apart.
+            'title' => 'A mark and a label (icon)',
+            'source' => implode("\n", [
+                '<shape:button size="xs" variant="solid" color="primary" icon="check">Approve</shape:button>',
+                '<shape:button size="sm" variant="solid" color="primary" icon="check">Approve</shape:button>',
+                '<shape:button size="md" variant="solid" color="primary" icon="check">Approve</shape:button>',
+                '<shape:button size="lg" variant="solid" color="primary" icon="check">Approve</shape:button>',
+            ]),
+        ],
+        [
+            // Two independent props rather than one with a position, so a button
+            // that wants a mark at both ends does not have to choose. Note the
+            // icons take each button's colour without being told: no colour class
+            // means currentColor, and the recipe above already set it.
+            'title' => 'Either side of the label (icon-trailing)',
+            'source' => implode("\n", [
+                '<shape:button variant="solid" color="primary" icon-trailing="arrow-right">Continue</shape:button>',
+                '<shape:button icon="download" icon-trailing="chevron-down">Export</shape:button>',
+                '<shape:button variant="soft" color="danger" icon="trash-2">Delete</shape:button>',
+            ]),
+        ],
+        [
+            // Each icon button is followed by a labelled one of the same rung,
+            // which is the pairing the row exists for: they are the same height.
+            // An icon-only button is a square of the height its rung already
+            // stood at, so a toolbar mixing the two still sits on one line.
+            //
+            // aria-label is not decoration. There is no text left to name these,
+            // and the mark inside stays hidden from assistive tech.
+            'title' => 'Icon only (no label)',
+            'source' => implode("\n", [
+                '<shape:button size="xs" icon="settings" aria-label="Settings" />',
+                '<shape:button size="xs">Extra small</shape:button>',
+                '<shape:button size="sm" icon="settings" aria-label="Settings" />',
+                '<shape:button size="sm">Small</shape:button>',
+                '<shape:button size="md" icon="settings" aria-label="Settings" />',
+                '<shape:button size="md">Medium</shape:button>',
+                '<shape:button size="lg" icon="settings" aria-label="Settings" />',
+                '<shape:button size="lg">Large</shape:button>',
+            ]),
+        ],
+        [
             'title' => 'Dark mode (role swap, same markup)',
             // Darker than the panel it sits in, so the stage still reads as its
             // own surface once the chrome around it is dark too.
@@ -74,13 +118,16 @@ return [
         [
             // The idle button beside each loading one is the point of the row:
             // they are the same width, so a form that starts submitting does not
-            // reflow around the button that is doing the submitting.
+            // reflow around the button that is doing the submitting. The icon on
+            // the second pair is what makes that claim worth checking -- the mark
+            // and the gap holding it off the label both have to stay in the
+            // layout, or the button would narrow the moment it went busy.
             'title' => 'Submitting (loading)',
             'source' => implode("\n", [
                 '<shape:button variant="solid" color="primary" loading>Save changes</shape:button>',
                 '<shape:button variant="solid" color="primary">Save changes</shape:button>',
-                '<shape:button size="sm" loading>Retry</shape:button>',
-                '<shape:button size="sm">Retry</shape:button>',
+                '<shape:button size="sm" icon="download" loading>Export</shape:button>',
+                '<shape:button size="sm" icon="download">Export</shape:button>',
             ]),
         ],
         [

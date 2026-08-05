@@ -6,6 +6,19 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\File;
 use Onelegstudios\Shape\Tests\TestCase;
 
+/**
+ * What the button put inside the wrapper it hides while loading -- its label and any
+ * icons, but not the spinner, which is the wrapper's sibling. Asserting on this
+ * rather than on the whole button is the difference between "the spinner rendered"
+ * and "the spinner is the only thing still visible".
+ */
+function labelWrapper(string $html): string
+{
+    preg_match('/<span class="contents[^"]*">(.*?)<\/span>/s', $html, $matches);
+
+    return $matches[1] ?? '';
+}
+
 it('defaults to the quiet button so the primary action stays opt-in', function () {
     $html = Blade::render('<shape:button>Cancel</shape:button>');
 
@@ -231,8 +244,13 @@ describe('loading', function () {
     it('keeps the label in the layout so the button does not change width', function () {
         // Hidden rather than removed: a button that shrank to its spinner would
         // reflow the row it sits in at the exact moment a form was submitting.
-        expect(Blade::render('<shape:button loading>Save changes</shape:button>'))
-            ->toContain('<span class="contents invisible">Save changes</span>');
+        // `contents` is what makes that exact -- a wrapper that generated a box
+        // would swallow the rung's gap and cost the button those few pixels.
+        $html = Blade::render('<shape:button loading>Save changes</shape:button>');
+
+        expect($html)->toContain('class="contents invisible"');
+
+        expect(labelWrapper($html))->toContain('Save changes');
     });
 
     it('disables itself and says why', function () {
@@ -289,5 +307,183 @@ describe('loading', function () {
             ->toContain('bg-danger-fill')
             ->toContain('px-3 py-1.5 text-sm')
             ->toContain('animate-spin');
+    });
+});
+
+describe('icon', function () {
+    // Same setup as the loading block, and for the same reason: an icon prop names
+    // a published component, so the artwork has to be on disk before any of this
+    // renders. `spinner` is here too, for the tests where the two features meet.
+    beforeEach(function () {
+        File::deleteDirectory(TestCase::iconPath());
+
+        $this->artisan('shape:icon:add', [
+            'name' => ['check', 'chevron-down', 'spinner'],
+            '--no-clear' => true,
+        ])->run();
+    });
+
+    afterEach(function () {
+        File::deleteDirectory(TestCase::iconPath());
+    });
+
+    it('puts the icon before the label', function () {
+        // Position is asserted rather than presence: an icon after the words it
+        // introduces is a different component from the one this prop describes.
+        $html = Blade::render('<shape:button icon="check">Save</shape:button>');
+
+        expect(strpos($html, '<svg'))->toBeLessThan(strpos($html, 'Save'));
+    });
+
+    it('puts a trailing icon after the label', function () {
+        $html = Blade::render('<shape:button icon-trailing="chevron-down">More</shape:button>');
+
+        expect(strpos($html, '<svg'))->toBeGreaterThan(strpos($html, 'More'));
+    });
+
+    it('carries a leading and a trailing icon at once', function () {
+        // The two props are independent, which is what a split button or a menu
+        // trigger with a mark of its own needs.
+        $html = Blade::render('<shape:button icon="check" icon-trailing="chevron-down">New</shape:button>');
+
+        expect(substr_count($html, '<svg'))->toBe(2);
+    });
+
+    it('sizes the icon to the rung the button resolved', function (string $size, string $expected) {
+        // The whole reason this is a prop: the rung is resolved once and the icon
+        // is handed it, so a call site cannot change one and forget the other.
+        expect(Blade::render('<shape:button size="'.$size.'" icon="check">Save</shape:button>'))
+            ->toContain($expected);
+    })->with([
+        'xs takes the smallest icon' => ['xs', 'size-3.5'],
+        'sm matches a toolbar' => ['sm', 'size-4'],
+        'md is the form default' => ['md', 'size-5'],
+        'lg is the largest' => ['lg', 'size-6'],
+        'a size the scale does not have falls back with the button' => ['huge', 'size-5'],
+    ]);
+
+    it('leaves the icon on the button colour rather than giving it one', function () {
+        // No colour class means `currentColor`, which is how one recipe dresses the
+        // icon correctly in every variant without the icon knowing which it is in.
+        expect(Blade::render('<shape:button variant="solid" color="danger" icon="check">Delete</shape:button>'))
+            ->not->toContain('text-danger-on-tint');
+    });
+
+    it('hides the icon from assistive tech when a label sits beside it', function () {
+        // The words already say what the button does; announcing the mark as well
+        // would say it twice.
+        expect(Blade::render('<shape:button icon="check">Save</shape:button>'))
+            ->toContain('aria-hidden="true"')
+            ->not->toContain('role="img"');
+    });
+
+    it('takes both icons from a named set', function () {
+        config()->set('shape.icons.sets', ['fixture' => 'fixture']);
+
+        $this->artisan('shape:icon:add', [
+            'name' => ['check', 'cross'],
+            '--set' => 'fixture',
+            '--no-clear' => true,
+        ])->run();
+
+        $html = Blade::render('<shape:button icon="check" icon-trailing="cross" icon-set="fixture">Save</shape:button>');
+
+        expect($html)
+            ->toContain('data-fixture="check"')
+            ->toContain('data-fixture="cross"');
+    });
+
+    it('reads the kebab-cased props a call site actually writes', function () {
+        // Blade camelizes anonymous-component data and Blaze's props compiler reads
+        // both spellings, but the button is compiled by Blaze rather than Blade, so
+        // the path that matters here is the one no other prop on this component
+        // exercises -- every other prop is a single word.
+        expect(Blade::render('<shape:button icon-trailing="chevron-down">More</shape:button>'))
+            ->toContain('<svg');
+    });
+
+    it('does not leak the icon props onto the rendered element', function () {
+        $html = Blade::render('<shape:button icon="check" icon-trailing="chevron-down" icon-set="default">Save</shape:button>');
+
+        expect($html)
+            ->not->toContain('icon="')
+            ->not->toContain('icon-trailing="')
+            ->not->toContain('icon-set="');
+    });
+
+    it('ignores an icon prop that does not name one', function (string $tag) {
+        // A bare `<shape:button icon>` arrives as `true` and would send the icon
+        // component looking for artwork named "1", failing loudly for a call site
+        // that plainly meant nothing by it.
+        expect(Blade::render($tag))->toBe(Blade::render('<shape:button>Save</shape:button>'));
+    })->with([
+        'a valueless attribute' => ['<shape:button icon>Save</shape:button>'],
+        'an empty name' => ['<shape:button icon="">Save</shape:button>'],
+        'an empty trailing name' => ['<shape:button icon-trailing="">Save</shape:button>'],
+    ]);
+
+    it('hides an icon with the label rather than leaving it behind the spinner', function () {
+        // Label and icons share the wrapper the loading state hides, so the button
+        // keeps the width its icon and gap gave it and the spinner is alone.
+        $html = Blade::render('<shape:button loading icon="check">Save</shape:button>');
+
+        expect(labelWrapper($html))
+            ->toContain('Save')
+            ->toContain('<svg');
+
+        expect($html)->toContain('animate-spin');
+    });
+
+    describe('with no label', function () {
+        it('squares up to the height the labelled rung already stands at', function (string $size, string $expected) {
+            // An icon button and a text button of the same rung line up in a
+            // toolbar row, which is the only thing this second scale buys. The
+            // padding is not the rung's own `py`: it closes the gap between the
+            // icon's height and the line-height a label would have had.
+            expect(Blade::render('<shape:button size="'.$size.'" icon="check" />'))
+                ->toContain($expected);
+        })->with([
+            'xs holds the WCAG 2.5.8 floor at 24px' => ['xs', 'p-1.25'],
+            'sm suits a toolbar at 32px' => ['sm', 'p-2'],
+            'md is the form default at 36px' => ['md', 'p-2'],
+            'lg is a thumb target at 44px' => ['lg', 'p-2.5'],
+        ]);
+
+        it('pads on both axes so the button comes out square', function () {
+            // A one-sided `py` here would leave the icon in a wide pill, which is
+            // the shape this branch exists to avoid.
+            $html = Blade::render('<shape:button icon="check" />');
+
+            expect($html)
+                ->not->toContain('px-4')
+                ->not->toContain('py-2')
+                ->not->toContain('gap-2');
+        });
+
+        it('reads a slot of nothing but whitespace as no label', function () {
+            // Which is how anyone who indents their Blade writes one.
+            $html = Blade::render("<shape:button icon=\"check\">\n    \n</shape:button>");
+
+            expect($html)->toContain('p-2');
+        });
+
+        it('keeps the padded scale as soon as there is a label to pad', function () {
+            expect(Blade::render('<shape:button icon="check">Save</shape:button>'))
+                ->toContain('px-4 py-2');
+        });
+
+        it('stays padded for a button with no icon and no label', function () {
+            // An empty button is not an icon button, and squaring one up would be
+            // this component guessing at a call site that has said nothing.
+            expect(Blade::render('<shape:button />'))
+                ->toContain('px-4 py-2');
+        });
+
+        it('carries the name the call site gave it', function () {
+            // The accessible name belongs on the button rather than on the mark
+            // inside it, so it arrives the way every other attribute does.
+            expect(Blade::render('<shape:button icon="check" aria-label="Save" />'))
+                ->toContain('aria-label="Save"');
+        });
     });
 });

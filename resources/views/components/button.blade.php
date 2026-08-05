@@ -17,6 +17,9 @@
     'color' => null,
     'size' => null,
     'loading' => false,
+    'icon' => null,
+    'iconTrailing' => null,
+    'iconSet' => 'default',
 ])
 
 @php
@@ -104,6 +107,36 @@
         'lg' => 'gap-2.5 px-5 py-2.5 text-base',
     ];
 
+    // The same rungs with nothing to hold apart: a button whose only content is an
+    // icon. The scale above does not fit it -- `px` measured for a label leaves a
+    // wide pill around a 20px mark -- so the padding is equalised, and these are the
+    // values that land such a button on exactly the height the labelled rung beside
+    // it already stands at: 24, 32, 36 and 44px.
+    //
+    // They are not the rung's own `py` repeated, which is the part worth writing
+    // down. A labelled button is as tall as its text's line-height plus padding; an
+    // icon button is as tall as its icon plus padding, and 14px of icon is not 16px
+    // of line-height. So each value here is whatever closes that gap, and only `md`
+    // comes out matching its `py` -- the one rung where the icon and the line-height
+    // happen to be the same 20px.
+    //
+    // Padding rather than a fixed `size-*` for one reason: a border sits outside the
+    // box either way, so it adds its 2px to a padded button and to a fixed one that
+    // has no room for it. Stated as padding, an outline icon button matches an
+    // outline text button, and a solid one matches a solid one -- which is what
+    // makes the claim hold for every variant rather than for the three without a
+    // border. `xs` at 24px is also what keeps the WCAG 2.5.8 floor true for a button
+    // with no label to widen it.
+    //
+    // No `gap` and no `text`: neither has anything to size when there is one child
+    // and no words.
+    $squares = [
+        'xs' => 'p-1.25',
+        'sm' => 'p-2',
+        'md' => 'p-2',
+        'lg' => 'p-2.5',
+    ];
+
     // Variants are a closed set, so an unknown one falls back. Colours are not:
     // there is no list to check a consumer's own role against, and rejecting it
     // would be the denial this design exists to avoid. All that is left to enforce
@@ -113,11 +146,38 @@
 
     $classes = str_replace(':role', $role, $recipes[$variant] ?? $recipes['outline']);
 
-    // The rung is resolved rather than only its classes, because the spinner is
-    // handed the same one: an icon in a `sm` button should be the `sm` icon, and
-    // a size the scale does not have has to fall back in both places at once.
+    // The rung is resolved rather than only its classes, because every icon on the
+    // button is handed the same one: an icon in a `sm` button should be the `sm`
+    // icon, and a size the scale does not have has to fall back everywhere at once.
     $rung = isset($sizes[$size]) ? $size : 'md';
-    $scale = $sizes[$rung];
+
+    // An icon is a prop rather than something the slot has to spell out, which is
+    // the whole of what these three lines buy: the rung above is already resolved,
+    // so the component can size the icon correctly and a call site cannot get the
+    // pair out of step by changing one and forgetting the other. The slot is still
+    // there for everything a prop cannot say -- a second set on one button, an icon
+    // carrying its own colour, classes of its own.
+    //
+    // Guarded like the colour role is, and for the same reason: a bare
+    // `<shape:button icon>` arrives as `true` and would go looking for an icon
+    // named "1". Nothing beyond the type is checked here, because a name with no
+    // artwork behind it is the icon component's exception to throw and it already
+    // says which component it failed to find.
+    $lead = is_string($icon) && $icon !== '' ? $icon : null;
+    $trail = is_string($iconTrailing) && $iconTrailing !== '' ? $iconTrailing : null;
+    $set = is_string($iconSet) && $iconSet !== '' ? $iconSet : 'default';
+
+    // One `set` for both icons rather than one each. A single button drawing its two
+    // marks from two different libraries is not a thing anyone wants; a button whose
+    // icons come from a set other than the default is, and that is what this covers.
+    //
+    // An icon and no label is an icon-only button, which is a shape rather than a
+    // mode: there is no prop for it because the markup already says it. The slot is
+    // trimmed first so that a tag written across three lines counts as empty, which
+    // is how anyone who indents their Blade will write one.
+    $bare = ($lead !== null || $trail !== null) && trim((string) $slot) === '';
+
+    $scale = $bare ? $squares[$rung] : $sizes[$rung];
 
     // Loading is disabled with a reason, and both halves matter: `disabled` is
     // what stops the second submit, `aria-busy` is what says why. They are merged
@@ -127,36 +187,54 @@
 @endphp
 
 <button {{ $attributes->merge(array_merge(['type' => 'button', 'class' => $base.' '.$scale.' '.$classes], $state)) }}>
+    {{-- Everything the button says, in one wrapper the loading state can hide.
+
+         `contents` is what makes that free. A wrapper that generated a box would
+         collapse an icon-and-label into a single flex item and swallow the rung's
+         `gap`; with `display: contents` the children stay flex items of the button
+         itself, so this span costs nothing in the state that is not busy and the
+         markup does not have to be written out twice to avoid it.
+
+         What it buys in the state that is busy: the label stays in the layout, so a
+         form that starts submitting does not reflow around it -- and so do the
+         icons, which is the half that only matters now they exist. `visibility` is
+         inherited, so hiding the wrapper hides all three, and takes them out of the
+         accessibility tree, which is why the spinner below carries the label. --}}
+    <span @class(['contents', 'invisible' => $busy])>
+        {{-- No `color` and no `label`, both deliberate. Colour is left off so the
+             icon inherits the button's `currentColor`, which is what makes one
+             recipe work for every variant without the icon needing to know which
+             one it landed in. The label is left off because the words beside it
+             already say what the button does -- and where there are no words, the
+             accessible name belongs on the button element, not on one of its
+             children. --}}
+        @if ($lead !== null)
+            <x-shape::icon :name="$lead" :set="$set" :size="$rung" />
+        @endif
+
+        {{ $slot }}
+
+        @if ($trail !== null)
+            <x-shape::icon :name="$trail" :set="$set" :size="$rung" />
+        @endif
+    </span>
+
+    {{-- The overlay is the wrapper's sibling rather than its child, which is what
+         keeps it visible and on the button's own `currentColor`.
+
+         Written long-form rather than as `<shape:icon>`: the short tag is a
+         convenience the package compiles for applications, and its own views
+         should not need it to render.
+
+         `animate-spin` is a plain rotation because the artwork is the consumer's --
+         the alias can point at a ring, a dial, or a set Shape has never seen, and
+         continuous rotation is the one motion that suits all of them. The dynamic
+         props decline to fold, which is right: a folded label would freeze the
+         locale into the compiled view the same way folding would freeze this
+         component's config. --}}
     @if ($busy)
-        {{-- The label stays in the layout so the button keeps the width it had:
-             a form that starts submitting should not reflow around it.
-
-             `contents` is what makes that exact rather than approximate. A wrapper
-             that generated a box would collapse an icon-and-label slot into one
-             flex item and swallow the rung's `gap`, costing the button those few
-             pixels; with `display: contents` the children stay flex items of the
-             button itself. `visibility` is inherited, so hiding the wrapper still
-             hides them -- and takes them out of the accessibility tree, which is
-             why the spinner below carries the label instead.
-
-             The overlay is the wrapper's sibling rather than its child, which is
-             what keeps it visible and on the button's own `currentColor`. --}}
-        <span class="contents invisible">{{ $slot }}</span>
-
-        {{-- Written long-form rather than as `<shape:icon>`: the short tag is a
-             convenience the package compiles for applications, and its own views
-             should not need it to render.
-
-             `animate-spin` is a plain rotation because the artwork is the
-             consumer's -- the alias can point at a ring, a dial, or a set Shape
-             has never seen, and continuous rotation is the one motion that suits
-             all of them. The dynamic props decline to fold, which is right: a
-             folded label would freeze the locale into the compiled view the same
-             way folding would freeze this component's config. --}}
         <span class="absolute inset-0 grid place-items-center">
             <x-shape::icon name="spinner" :size="$rung" class="animate-spin" :label="__('shape::messages.button.loading')" />
         </span>
-    @else
-        {{ $slot }}
     @endif
 </button>

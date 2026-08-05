@@ -51,6 +51,31 @@ it('folds the icon call site away entirely', function () {
         ->not->toContain('renderComponent');
 });
 
+it('keeps a folded icon folded when it is nested in a button', function () {
+    // The slot is compiled in the calling template, so an icon written there still
+    // names itself at compile time and still disappears. Passing a button a slot
+    // costs its icon nothing.
+    expect(Blade::compileString('<shape:button><shape:icon name="check" />Save</shape:button>'))
+        ->toContain('[BlazeFolded]')
+        ->toContain('<svg');
+});
+
+it('cannot fold the icon a button takes as a prop', function () {
+    // The name crosses a component boundary: inside the button it is a variable,
+    // which is the dynamic `:name` case the icon documents as declining to fold.
+    // Asserted rather than left implicit because the call site does not look
+    // dynamic -- `icon="check"` is a literal, and the folding it loses is real.
+    //
+    // What it must not do is fall all the way back to Blade's component pipeline,
+    // which is what this pins: the icon is still reached by a Blaze function call.
+    $compiled = Blade::compileString('<shape:button icon="check">Save</shape:button>');
+
+    expect($compiled)
+        ->not->toContain('[BlazeFolded]')
+        ->toContain('$__blaze')
+        ->not->toContain('renderComponent');
+});
+
 it('optimises the branded tag and the namespaced tag the same way', function () {
     // The service provider rewrites <shape:button> into <x-shape::button> from a
     // prepareStringsForCompilationUsing callback, and Blaze hooks the same list
