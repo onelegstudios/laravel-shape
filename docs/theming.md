@@ -37,6 +37,28 @@ and `ring`. If you would rather own the whole theme, publish it and import your 
 php artisan vendor:publish --tag="shape-css"
 ```
 
+**Page surfaces** are the one group that is not per role, because some things do not have one.
+A text input is not `primary` or `danger` — it is made of the same material the page is made
+of, and asking which role it belongs to has no answer. Four tokens cover that material:
+
+| Token | What it is |
+|---|---|
+| `--color-surface` | The face of a control — a field, a panel |
+| `--color-surface-muted` | The same face, disabled |
+| `--color-ink` | What you typed, and text at full strength |
+| `--color-ink-muted` | Placeholder, help text, a value you cannot edit |
+
+Both muted steps clear AA against the surface beside them in either scheme, so they are safe
+for text rather than only for hairlines. Override them to sit fields on a tinted page, or to
+give the library a warmer ink than its neutral ramp:
+
+```css
+@theme {
+    --color-surface: light-dark(var(--color-stone-50), var(--color-stone-900));
+    --color-ink: light-dark(var(--color-stone-900), var(--color-stone-100));
+}
+```
+
 ## Adding a Colour Role
 
 The colour set is open. Components build their class names from the role at render time, so a

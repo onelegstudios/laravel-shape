@@ -10,7 +10,9 @@ namespace Onelegstudios\Shape\Icons;
  *
  * Shape still ships no icons and still requires no set. What it does know is the
  * part a consumer cannot reasonably be expected to: that the loading spinner is
- * `loader-circle` in Lucide and `arrow-path` in Heroicons. Leaving that in
+ * `loader-circle` in Lucide and `arrow-path` in Heroicons, and that the mark on a
+ * validation message is `circle-alert` in one and `exclamation-circle` in the
+ * other. Leaving that in
  * `config/shape.php` alone meant the installer could only ever offer the one
  * library the shipped file happened to name -- choosing another published
  * nothing until somebody knew which names to remap by hand.
@@ -45,7 +47,13 @@ final class Libraries
             // `loader-circle` is a single arc, so a plain rotation reads as
             // movement at a glance -- rather than `loader`, whose evenly spaced
             // spokes look nearly still while they turn.
+            //
+            // `circle-alert` over `triangle-alert` for the error: the triangle is
+            // the warning mark, and a field that failed validation is not being
+            // warned about. Over `circle-x` too, which reads as "removed" next to
+            // a close button using the same glyph.
             'aliases' => [
+                'error' => 'circle-alert',
                 'spinner' => 'loader-circle',
             ],
         ],
@@ -61,7 +69,12 @@ final class Libraries
             ],
             // Heroicons has no loader, so the spinner is `arrow-path`: the
             // refresh arrows, which is the icon its own examples spin.
+            //
+            // `exclamation-circle` is the same mark Lucide draws as
+            // `circle-alert`, which is the point of a name in between: the two
+            // libraries agree on the glyph and disagree only on what to call it.
             'aliases' => [
+                'error' => 'exclamation-circle',
                 'spinner' => 'arrow-path',
             ],
         ],

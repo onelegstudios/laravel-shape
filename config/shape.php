@@ -26,6 +26,15 @@ return [
             'size' => 'md',
         ],
 
+        // One key, because the input has one styling axis. There is no `variant`:
+        // an input is not competing for attention the way a button is, so there is
+        // no emphasis ladder to put it on. There is no `color` either -- the only
+        // thing an input's colour ever says is whether the value is wrong, and
+        // that is read from the validator rather than named at the call site.
+        'input' => [
+            'size' => 'md',
+        ],
+
         // The icon takes no defaults from here. It renders published components,
         // and folding those away at compile time is only safe while the component
         // reads nothing global -- a `size` default read from config would be
@@ -98,8 +107,10 @@ return [
         //
         // Empty, because Shape already knows what the libraries it can install
         // call these: the button's loading state asks for `spinner`, which is
-        // `loader-circle` in Lucide and `arrow-path` in Heroicons, and
-        // `shape:icon:add` reads that from the set it is publishing from. Those
+        // `loader-circle` in Lucide and `arrow-path` in Heroicons, the validation
+        // message asks for `error`, which is `circle-alert` and
+        // `exclamation-circle`, and `shape:icon:add` reads that from the set it is
+        // publishing from. Those
         // names are also the ones `shape:install` publishes unasked, into the
         // default set alone, so a fresh install needs nothing here at all.
         //

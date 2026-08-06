@@ -60,7 +60,7 @@ it('names an icon each installed set actually has', function (string $set) {
 it('lists the names Shape asks for once, whichever library spells them', function () {
     // The keys, not what they resolve to: the published file is named for the
     // name that asked for it, so both libraries contribute the same one entry.
-    expect(Libraries::required())->toBe(['spinner']);
+    expect(Libraries::required())->toBe(['error', 'spinner']);
 });
 
 it('lists a name from every library it knows', function () {

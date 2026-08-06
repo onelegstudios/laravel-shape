@@ -21,9 +21,9 @@ it('loads the package translations', function () {
     expect(trans('shape::messages.button.loading'))->toBe('Loading');
 });
 
-it('loads the package views', function () {
-    expect(view()->exists('shape::components.button'))->toBeTrue();
-});
+it('loads the package views', function (string $component) {
+    expect(view()->exists('shape::components.'.$component))->toBeTrue();
+})->with(['button', 'icon', 'input', 'field', 'label', 'description', 'error']);
 
 it('registers the artisan commands', function () {
     $registered = array_keys(Artisan::all());

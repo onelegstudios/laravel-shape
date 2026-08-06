@@ -39,14 +39,17 @@ workbench:
     - shape-icon-add:
         name:
           - arrow-right
+          - at-sign
           - check
           - chevron-down
           - circle-check
           - circle-x
           - download
+          - error
           - info
           - monitor
           - moon
+          - search
           - settings
           - spinner
           - sun
