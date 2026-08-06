@@ -18,8 +18,18 @@ php artisan vendor:publish --tag="shape-config"
         'size' => 'md',
     ],
 
+    'input' => [
+        'size' => 'md',
+    ],
+
 ],
 ```
+
+The input has one key because it has one styling axis. There is no `variant`: an input is not
+competing for attention the way a button is, so there is no emphasis ladder to put it on. There
+is no `color` either — the only thing an input's colour ever says is whether the value is wrong,
+and that is read from the validator rather than named at a call site. See
+[Components](components.md#input).
 
 The icon takes no defaults from here. It renders published components, and folding those away
 at compile time is only safe while the component reads nothing global — a `size` read from

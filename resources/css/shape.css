@@ -175,6 +175,35 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Layer 2b: page surfaces
+
+   The four above are per role, because a button is `primary` or `danger` and its
+   surfaces follow. These are not: a form field is not a role, it is made of the
+   same material the page is made of, and asking which role a text input belongs
+   to has no answer. So they are named for the material rather than for a rank.
+
+   `surface` is the field, `surface-muted` the disabled one; `ink` is what you
+   typed, `ink-muted` the placeholder, the help text, and the value you cannot
+   edit. Both muted steps clear AA against the surface beside them in each scheme
+   -- slate-500 on white is 4.8:1, slate-400 on slate-900 is 7.1:1 -- which is
+   what makes them safe for text rather than only for hairlines.
+
+   Override these to sit a field on a tinted page, or to give the library a
+   warmer ink than its neutral ramp:
+
+       @theme {
+           --color-surface: light-dark(var(--color-stone-50), var(--color-stone-900));
+       }
+   --------------------------------------------------------------------------- */
+
+@theme {
+    --color-surface: light-dark(var(--color-white), var(--color-neutral-900));
+    --color-surface-muted: light-dark(var(--color-neutral-100), var(--color-neutral-800));
+    --color-ink: light-dark(var(--color-neutral-900), var(--color-neutral-100));
+    --color-ink-muted: light-dark(var(--color-neutral-500), var(--color-neutral-400));
+}
+
+/* ---------------------------------------------------------------------------
    Layer 3: class generation
 
    Components build their class names from the colour role at render time, so

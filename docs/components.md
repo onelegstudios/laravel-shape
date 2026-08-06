@@ -106,6 +106,137 @@ The spinner is a published icon rather than one Shape ships, so
 resolves through the `spinner` alias, which means the artwork is yours to choose: point it at
 another name in [Configuration](configuration.md) and the button follows.
 
+## Input
+
+A form field is five components, and most of the time you want one of them to assemble the
+other four:
+
+```blade
+<shape:input label="Email" description="We never share it." wire:model="email" />
+```
+
+That renders a label, the control, the help text, and — when the validator has something to say
+about `email` — the message, with the label pointed at the control and `aria-describedby`
+pointing at the parts that exist. Everything the shorthand cannot say goes back to the parts
+themselves, which are `<shape:field>`, `<shape:label>`, `<shape:description>` and
+`<shape:error>`:
+
+```blade
+<shape:field name="email">
+    <shape:label>Email</shape:label>
+    <shape:description>We never share it.</shape:description>
+    <shape:input wire:model="email" />
+    <shape:error />
+</shape:field>
+```
+
+Naming the field once is what holds that together. The label points `for` at an id derived from
+the name, the control answers to it, the description takes an id the control can name, and the
+message knows which field it belongs to — four components that cannot see each other, agreeing
+because they all derive from the same string. A name spelled the way the validator spells it
+works unchanged: `user.email` and `items[0].qty` become `user-email` and `items-0-qty`.
+
+A field that names itself names its control too, so the composed form above submits `email`
+without the `<shape:input>` repeating it. A control carrying its own `name` or a `wire:model`
+is left alone — it has already said which field it is.
+
+`size` sets density — `xs`, `sm`, `md`, or `lg`, defaulting to `md`, and configurable in
+[Configuration](configuration.md). The rungs are the button's own, so a field and the button
+that submits it stand level in the same row:
+
+```blade
+<shape:input size="sm" placeholder="Search orders" />
+<shape:button size="sm" variant="solid" color="primary">Search</shape:button>
+```
+
+There is no `variant` and no `color`. An input is not competing for attention the way a button
+is, so there is no emphasis ladder to put it on — and the only thing an input's colour ever
+says is whether the value is wrong, which is read rather than named.
+
+### Invalid
+
+The input looks itself up in the validation error bag and styles itself accordingly, setting
+`aria-invalid` at the same time. It finds its own name in the `name` attribute, in whatever
+`wire:model` is bound to — modifiers and all, so `wire:model.live.debounce.300ms` resolves —
+or in the field around it, in that order.
+
+```blade
+{{-- Nothing here says "invalid". A failed request is enough. --}}
+<shape:input label="Email" wire:model="email" />
+```
+
+`invalid` overrides that in both directions: `:invalid="true"` marks a field the validator has
+not seen yet, and `:invalid="false"` clears one it has.
+
+A **bare** input — no label, no description — takes the styling and the `aria-invalid` but
+prints no message. There is no field around it to put a sentence in, and an application writing
+its own label is almost certainly writing its own error too. Add one with `<shape:error>`, or
+let the shorthand do it.
+
+The message carries a mark as well as its colour, so a long form shows where it failed without
+being read end to end. It resolves through the `error` alias — `circle-alert` in Lucide,
+`exclamation-circle` in Heroicons — so the artwork is yours to change in
+[Configuration](configuration.md), and it is hidden from assistive tech because the sentence
+beside it already says the same thing. That sentence, not the mark and not the colour, is what
+carries the meaning for a reader who cannot see either.
+
+Like the button's spinner, it has to have been published. `shape:install` does it for you;
+`php artisan shape:icon:add error` is the manual form, `shape:icon:check` reports it missing,
+and `shape:icon:remove` will not take it away without `--force`.
+
+### Icons
+
+`icon` puts a mark at the start of the field and `icon-trailing` puts one at the end, sized to
+the field's own rung and resolved exactly the way `<shape:icon>` resolves them — so the name has
+to have been published (`php artisan shape:icon:add search`). `icon-set` names another set for
+both at once.
+
+```blade
+<shape:input icon="search" placeholder="Search" />
+
+<shape:input icon="at-sign" icon-trailing="chevron-down" type="email" />
+```
+
+Both marks stay hidden from assistive tech: they decorate a control its label already named.
+
+### Attributes
+
+`class` goes on the box; everything else goes on the control. That is the one rule this
+component's shape costs, and it is the right way round — `max-w-sm`, `rounded-none` and a
+border of your own are things you are saying about the box you can see, while `wire:model`,
+`type`, `required`, `placeholder` and `readonly` are things only the `<input>` can act on.
+
+```blade
+<shape:input class="max-w-sm" type="email" required placeholder="you@example.com" />
+```
+
+The field fills the width it is given, so constrain it with `max-w-*` rather than `w-*`. Shape
+merges classes without resolving Tailwind conflicts, so a `w-64` lands beside the component's
+own `w-full` and the stylesheet's order decides which wins — as it does on the button.
+
+`type` defaults to `text` and a call site's own wins. `id` is derived from the field name, and
+an explicit one overrides it — which is what you want when a name collides with something else
+on the page.
+
+### One gap, in the composed form
+
+The shorthand wires `aria-describedby` because it rendered the description and the message
+itself, so it knows exactly which ids exist. The composed form cannot: an anonymous component
+cannot see which of its children drew something, and naming an id that was never rendered is an
+audit finding rather than a courtesy. So in the composed form that one attribute is yours:
+
+```blade
+<shape:field name="email">
+    <shape:label>Email</shape:label>
+    <shape:description>We never share it.</shape:description>
+    <shape:input wire:model="email" aria-describedby="email-description" />
+    <shape:error />
+</shape:field>
+```
+
+Closing that gap is the whole reason the shorthand exists. Reach for the parts when you need
+markup the props cannot describe, and for the prop the rest of the time.
+
 ## Icon
 
 Icons have their own page: [Icons](icons.md).
@@ -177,6 +308,20 @@ which is the promise the config file exists to make.
 
 `memo`, Blaze's third strategy, is unused for the same reason: it keys on the call site alone,
 so it cannot see a config change either.
+
+**The field components opt out of Blaze entirely** — the input, the field, the label, the
+description and the error all stay on Blade's own pipeline. They share a field name through
+`@aware`, and Blaze compiles that directive against a data stack of its own that does not agree
+with Blade's: it walks only a component's ancestors where Blade checks the component's own data
+first, and it strips the key from the attribute bag on the way past. A field compiled by one
+and a label by the other would wire themselves to different names, which is the single thing
+these components exist to get right. Blaze declines to fold an `@aware` component regardless,
+so the strategy that would have paid best was never available to them.
+
+That costs a form the difference between one pipeline and the other, on a component you
+render a handful of times per page rather than hundreds. If you are rendering hundreds of
+fields in a loop, the shorthand is the thing to drop first — it is five components where the
+bare `<shape:input>` is two.
 
 Nothing stops you enabling either for your own components, and Blaze can be turned off entirely
 with `BLAZE_ENABLED=false` if you want to compare.

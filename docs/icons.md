@@ -165,8 +165,9 @@ letting an unanswerable prompt fall back to its default and report success havin
 
 A few names are not yours to lose by accident: the [semantic names](#semantic-names) Shape's own
 components ask for, which `shape:install` publishes unasked so those components have artwork. Today
-that is `spinner`, which the button's loading state renders. Removing it does not leave you short of
-an icon you chose — it leaves a button rendering nothing mid-submit.
+those are `spinner`, which the button's loading state renders, and `error`, which the validation
+message renders. Removing one does not leave you short of an icon you chose — it leaves a button
+rendering nothing mid-submit, or a form that throws at the moment it has something to report.
 
 So they are held back from every route into the command. `--all` sweeps around them, the prompt
 does not offer them, and naming one outright is refused:
@@ -480,11 +481,15 @@ php artisan vendor:publish --tag=blade-icons
 
 Shape's own components can't name `loader-circle` or `arrow-path` directly — the package has no idea
 which library you installed. The button's [loading state](components.md#button) asks for
-`spinner`, and the set it is published from decides what that means:
+`spinner` and the [validation message](components.md#input) asks for `error`, and the set each is
+published from decides what those mean:
 
 ```blade
 <shape:icon name="spinner" />                  {{-- lucide-loader-circle --}}
 <shape:icon name="spinner" set="solid" />      {{-- heroicon-s-arrow-path --}}
+
+<shape:icon name="error" />                    {{-- lucide-circle-alert --}}
+<shape:icon name="error" set="solid" />        {{-- heroicon-s-exclamation-circle --}}
 ```
 
 Nothing in your config says either of those. Shape ships the names for the libraries it can

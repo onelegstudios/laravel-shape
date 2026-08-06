@@ -87,6 +87,30 @@ it('optimises the branded tag and the namespaced tag the same way', function () 
         ->toBe(Blade::compileString('<x-shape::button>Save</x-shape::button>'));
 });
 
+it('leaves the field components on blade\'s own pipeline', function (string $tag) {
+    // The one family that opts out, and not as an oversight. Blaze compiles
+    // `@aware` against its own data stack while Blade compiles it against the
+    // component stack, and the two disagree twice over: BlazeRuntime walks only
+    // the ancestors where ManagesComponents checks the component's own data
+    // first, and Blaze's AwareCompiler also unsets the key from $attributes on
+    // the way past. A field compiled by one and a label by the other would read
+    // two different names, which is the single thing these components exist to
+    // get right.
+    //
+    // Asserted rather than left to a comment because the cost of getting it wrong
+    // is invisible: the markup still renders, it just wires itself to the wrong
+    // field.
+    expect(Blade::compileString($tag))
+        ->toContain('renderComponent')
+        ->not->toContain('$__blaze');
+})->with([
+    'the input' => ['<shape:input name="email" />'],
+    'the field' => ['<shape:field name="email"><shape:input /></shape:field>'],
+    'the label' => ['<shape:label>Email</shape:label>'],
+    'the description' => ['<shape:description>Help</shape:description>'],
+    'the error' => ['<shape:error name="email" />'],
+]);
+
 it('memoizes neither component', function () {
     // Memoization caches rendered output against the call site alone. The icon has
     // no need of it -- folding removes the render entirely -- and the button cannot

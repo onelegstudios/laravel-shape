@@ -334,8 +334,11 @@ it('asks which sets to install, which weights, and which one is the default', fu
         // Both packages, one publish: the icons Shape's own views render are
         // published from the default set, which is the set those views resolve
         // through. Lucide is installed for this application's own call sites.
-        ->expectsOutputToContain('shape:icon:add --set=solid spinner')
-        ->doesntExpectOutputToContain('shape:icon:add --set=lucide spinner')
+        // Every name Shape's own views ask for, not just the first one: the list
+        // is read from the alias table, so a component that starts drawing a new
+        // mark is published by the same run without the installer being told.
+        ->expectsOutputToContain('shape:icon:add --set=solid error spinner')
+        ->doesntExpectOutputToContain('shape:icon:add --set=lucide')
         ->assertSuccessful();
 });
 

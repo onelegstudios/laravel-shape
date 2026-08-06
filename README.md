@@ -130,10 +130,21 @@ if that's the wrong starting point for your application.
 button's own rung so the two cannot drift apart. A button given an icon and no label squares
 up into an icon button — give that one an `aria-label`.
 
+A form field is one tag or five, whichever the screen needs:
+
+```blade
+<shape:input label="Email" description="We never share it." wire:model="email" />
+```
+
+That writes the label, the control, the help text and the validation message, wires the label
+to the control, and reads its invalid state out of the error bag by itself. When the shorthand
+can't say it, the parts are there — `<shape:field>`, `<shape:label>`, `<shape:description>` and
+`<shape:error>` — and naming the field once is what keeps them in agreement.
+
 ## Documentation
 
-- [Theming](docs/theming.md) — colour roles, surface tokens, adding a role, dark mode
-- [Components](docs/components.md) — the `shape:` prefix and the button's props
+- [Theming](docs/theming.md) — colour roles, surface tokens, page surfaces, adding a role, dark mode
+- [Components](docs/components.md) — the `shape:` prefix, the button, and the input's field parts
 - [Icons](docs/icons.md) — publishing icons, sets, semantic names, accessibility, set size
 - [Configuration](docs/configuration.md) — component defaults in `config/shape.php`
 - [Style Guide](docs/STYLE_GUIDE.md) — the design guidance the components are built to
