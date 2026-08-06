@@ -239,6 +239,33 @@
 @source inline("hover:bg-{primary,success,warning,danger,info,neutral}-{fill-hover,tint,tint-hover}");
 @source inline("focus-visible:outline-{primary,success,warning,danger,info,neutral}-ring");
 
+/* ---------------------------------------------------------------------------
+   Layer 4: variants for pseudo-elements Tailwind does not name
+
+   One entry, and it exists because `::-webkit-calendar-picker-indicator` is the
+   only piece of native chrome any Shape control still draws. There is no utility
+   variant for it, so the alternative was a hand-written rule in this file --
+   which would mean a package reaching into every date input in the consuming
+   application, and styling that lives in a stylesheet rather than in the
+   component that opts into it.
+
+   Declared as a variant instead, the affordance is three ordinary tokens on the
+   control: `picker:cursor-pointer picker:opacity-60 picker:hover:opacity-100`.
+   The glyph is a button that inherits the field's text cursor, and it is drawn at
+   full contrast in a colour Shape does not control -- so it reads louder than the
+   trailing `text-ink-muted` mark in the field beside it until it is knocked back.
+
+   Nothing here inverts it for dark mode, and nothing needs to: Chromium draws the
+   indicator from the element's `color-scheme`, which the block below sets. The
+   usual `filter: invert(1)` fix cannot be expressed in `light-dark()` and would
+   have needed a `dark:` class this library does not have.
+
+   Chromium only. Firefox draws no such control and Safari exposes no such
+   pseudo-element, so the classes are inert there rather than wrong.
+   --------------------------------------------------------------------------- */
+
+@custom-variant picker (&::-webkit-calendar-picker-indicator);
+
 /* light-dark() resolves against `color-scheme`, so declaring both here is what
    makes the surface tokens follow the operating system. Setting the scheme on an
    element overrides it for that subtree, which is how the classes below work. */

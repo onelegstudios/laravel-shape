@@ -81,6 +81,20 @@ return [
             ]),
         ],
         [
+            // The one piece of native chrome left in this component. Chromium draws a
+            // calendar button in a date field at full contrast, in a colour the
+            // component does not control, so it reads louder than a trailing mark in
+            // the field beside it -- these knock it back to the same weight and give
+            // it the pointer cursor a button should have. Firefox and Safari draw no
+            // such thing, so the classes are inert rather than wrong there.
+            'title' => 'Date fields, and the native picker knocked back',
+            'source' => implode("\n", [
+                '<shape:input type="date" class="max-w-3xs" />',
+                '<shape:input type="time" class="max-w-3xs" />',
+                '<shape:input label="Starts" type="datetime-local" name="starts_at" class="max-w-3xs" />',
+            ]),
+        ],
+        [
             // The parts, used directly. Naming the field once is what lets three
             // components that cannot see each other agree: the label points at the
             // control, the description gets an id the control can name, and the

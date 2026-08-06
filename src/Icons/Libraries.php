@@ -10,12 +10,20 @@ namespace Onelegstudios\Shape\Icons;
  *
  * Shape still ships no icons and still requires no set. What it does know is the
  * part a consumer cannot reasonably be expected to: that the loading spinner is
- * `loader-circle` in Lucide and `arrow-path` in Heroicons, and that the mark on a
+ * `loader-circle` in Lucide and `arrow-path` in Heroicons, that the mark on a
  * validation message is `circle-alert` in one and `exclamation-circle` in the
- * other. Leaving that in
+ * other, and that the pair of arrows on a select is `chevrons-up-down` in one and
+ * `chevron-up-down` in the other. Leaving that in
  * `config/shape.php` alone meant the installer could only ever offer the one
  * library the shipped file happened to name -- choosing another published
  * nothing until somebody knew which names to remap by hand.
+ *
+ * Two of the names below resolve to the same spelling in both libraries, which
+ * makes their entries look redundant and is not. An entry here is what puts a
+ * name in `required()`: it is how `shape:install` knows to publish the mark a
+ * checkbox draws, how `shape:icon:check` knows to report it missing, and how
+ * `shape:icon:remove` knows not to take it away. The table answers "which icons
+ * does Shape itself need" as much as "what does this library call them".
  *
  * So this is the naming layer's factory setting. `icons.sets` and
  * `icons.aliases` are read first and win where they say anything, which keeps
@@ -52,8 +60,24 @@ final class Libraries
             // the warning mark, and a field that failed validation is not being
             // warned about. Over `circle-x` too, which reads as "removed" next to
             // a close button using the same glyph.
+            //
+            // `chevrons-up-down` over `chevron-down` for the select: two arrows
+            // say the value can move in either direction through a list, where one
+            // pointing down says a panel opens beneath -- which is what a
+            // disclosure does, not what a select does. It is also the pair
+            // Heroicons draws for the same control, so the two libraries agree on
+            // the shape and disagree only on where the `s` goes.
+            //
+            // The checkbox's two marks are named for their role rather than their
+            // glyph. `checkbox-check` is `check` here and in Heroicons, so the
+            // entry buys no translation -- what it buys is the ability to repoint
+            // the mark inside a checkbox without repointing every
+            // `<shape:icon name="check" />` in the application.
             'aliases' => [
+                'checkbox-check' => 'check',
+                'checkbox-indeterminate' => 'minus',
                 'error' => 'circle-alert',
+                'select-chevron' => 'chevrons-up-down',
                 'spinner' => 'loader-circle',
             ],
         ],
@@ -73,8 +97,20 @@ final class Libraries
             // `exclamation-circle` is the same mark Lucide draws as
             // `circle-alert`, which is the point of a name in between: the two
             // libraries agree on the glyph and disagree only on what to call it.
+            // `chevron-up-down` is the same again, and the near-miss is the
+            // instructive one: Lucide pluralises the noun where Heroicons
+            // pluralises nothing, so a package hardcoding either spelling breaks
+            // for half its consumers.
+            //
+            // Heroicons has no `circle` and no `dot`, which is why the radio's
+            // mark is not in this table at all: a filled dot is two tokens of CSS
+            // in the component rather than an alias pointing at a glyph one of the
+            // two libraries does not have.
             'aliases' => [
+                'checkbox-check' => 'check',
+                'checkbox-indeterminate' => 'minus',
                 'error' => 'exclamation-circle',
+                'select-chevron' => 'chevron-up-down',
                 'spinner' => 'arrow-path',
             ],
         ],

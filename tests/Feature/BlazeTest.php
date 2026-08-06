@@ -105,6 +105,11 @@ it('leaves the field components on blade\'s own pipeline', function (string $tag
         ->not->toContain('$__blaze');
 })->with([
     'the input' => ['<shape:input name="email" />'],
+    'the select' => ['<shape:select name="plan" />'],
+    'the textarea' => ['<shape:textarea name="bio" />'],
+    'the file input' => ['<shape:file name="avatar" />'],
+    'the checkbox' => ['<shape:checkbox name="terms" value="1" />'],
+    'the radio' => ['<shape:radio name="plan" value="pro" />'],
     'the field' => ['<shape:field name="email"><shape:input /></shape:field>'],
     'the label' => ['<shape:label>Email</shape:label>'],
     'the description' => ['<shape:description>Help</shape:description>'],

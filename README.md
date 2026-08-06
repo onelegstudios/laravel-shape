@@ -59,9 +59,12 @@ php artisan shape:icon:add spinner
 ```
 
 Each library spells those names its own way — the button's spinner is Lucide's `loader-circle`
-and Heroicons' `arrow-path` — and Shape knows which is which, so a set you pick works without a
+and Heroicons' `arrow-path`, the select's chevron is `chevrons-up-down` and `chevron-up-down` — and
+Shape knows which is which, so a set you pick works without a
 config edit. The set stays a package you own — swap or remove it with plain Composer, and
-re-publish. See [Icons](docs/icons.md) for sets, semantic names, and the rest of the commands.
+re-publish. `php artisan shape:icon:check --strict` is how a build finds out that an upgraded Shape
+draws a mark the application has not published yet. See [Icons](docs/icons.md) for sets, semantic
+names, and the rest of the commands.
 
 The installer takes flags for each of its steps, so it can run unattended:
 

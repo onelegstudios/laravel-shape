@@ -41,6 +41,8 @@ workbench:
           - arrow-right
           - at-sign
           - check
+          - checkbox-check
+          - checkbox-indeterminate
           - chevron-down
           - circle-check
           - circle-x
@@ -50,6 +52,7 @@ workbench:
           - monitor
           - moon
           - search
+          - select-chevron
           - settings
           - spinner
           - sun

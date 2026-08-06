@@ -11,6 +11,7 @@ use Illuminate\Filesystem\Filesystem;
 use Onelegstudios\Shape\Console\Commands\Concerns\InteractsWithPublishedIcons;
 use Onelegstudios\Shape\Console\Commands\Concerns\ResolvesIconNames;
 use Onelegstudios\Shape\Console\Commands\Concerns\WritesIconComponents;
+use Onelegstudios\Shape\Icons\Libraries;
 
 /**
  * Report what `shape:icon:update` would do, without doing any of it.
@@ -42,6 +43,14 @@ use Onelegstudios\Shape\Console\Commands\Concerns\WritesIconComponents;
  * only looks, and a status report covering one of three published directories is
  * half an answer. For the same reason it never prompts: the run that needs this
  * most is the one in CI with nobody at the terminal.
+ *
+ * It answers a second question the other verbs cannot, and it is the one an
+ * upgrade needs: whether every name Shape's own views ask for is on disk at all.
+ * The three acting verbs are all driven by what a caller named or what a
+ * directory already holds, so none of them can notice an absence -- a component
+ * that starts drawing a new mark leaves an application that has not re-run
+ * `shape:install` with a view that throws the first time it renders. Reported
+ * against `default/`, because that is the directory those views resolve through.
  */
 class CheckIconCommand extends Command
 {
@@ -83,12 +92,30 @@ class CheckIconCommand extends Command
         /** @var array<int, string> $names */
         $names = (array) $this->argument('name');
 
+        $tally = [
+            'checked' => 0,
+            'current' => 0,
+            'outdated' => 0,
+            'edited' => 0,
+            'forwards' => 0,
+            'missing' => 0,
+            'unstamped' => 0,
+            'skipped' => 0,
+            'unpublished' => 0,
+        ];
+
         $published = $this->publishedSets($files, $path);
 
         if ($published === []) {
             $this->components->info('No icons are published.');
 
-            return self::SUCCESS;
+            // Still reported, and this is the case that needs it most: an
+            // application with nothing published is one where every shipped
+            // component is about to throw. Returning early without saying so
+            // would make the emptiest directory the quietest report.
+            $tally['unpublished'] = $this->reportUnpublished($files, $path);
+
+            return $this->summarise($tally, $path);
         }
 
         $option = $this->option('set');
@@ -99,17 +126,6 @@ class CheckIconCommand extends Command
         if (is_string($option) && $option !== '') {
             $published = [$option];
         }
-
-        $tally = [
-            'checked' => 0,
-            'current' => 0,
-            'outdated' => 0,
-            'edited' => 0,
-            'forwards' => 0,
-            'missing' => 0,
-            'unstamped' => 0,
-            'skipped' => 0,
-        ];
 
         $seen = [];
 
@@ -239,7 +255,52 @@ class CheckIconCommand extends Command
             $tally['skipped']++;
         }
 
+        // Only where the run was not narrowed to a list of names. `check spinner`
+        // is a question about one icon, and answering it with a paragraph about
+        // three others is the report nobody asked for -- and `--set` narrows the
+        // rows without narrowing this, because what these names are missing from
+        // is `default/` rather than any set a caller can name.
+        if ($names === []) {
+            $tally['unpublished'] = $this->reportUnpublished($files, $path);
+        }
+
         return $this->summarise($tally, $path);
+    }
+
+    /**
+     * Report the names Shape's own views ask for that are not on disk.
+     *
+     * Checked against `default/` rather than against a set, because that is what
+     * those views resolve through: they ask without a `set` prop, and the forward
+     * is the file that answers. An icon published into `solid/` with no forward
+     * beside it is artwork nothing renders, which is the same absence.
+     *
+     * Existence only, not contents. A forward pointing at a set that is no longer
+     * published is already reported as `forward out of date` by the sweep above,
+     * and saying it twice in two vocabularies would make the report harder to act
+     * on rather than easier.
+     *
+     * @return int The number missing.
+     */
+    private function reportUnpublished(Filesystem $files, string $path): int
+    {
+        $missing = array_values(array_filter(
+            Libraries::required(),
+            static fn (string $name): bool => ! $files->exists($path.'/default/'.$name.'.blade.php'),
+        ));
+
+        if ($missing !== []) {
+            $this->newLine();
+        }
+
+        foreach ($missing as $name) {
+            $this->components->twoColumnDetail(
+                'default/'.$name,
+                '<fg=red>not published</>',
+            );
+        }
+
+        return count($missing);
     }
 
     /**
@@ -339,11 +400,24 @@ class CheckIconCommand extends Command
             $this->components->warn("Left {$tally['skipped']} name(s) alone that were not published.");
         }
 
+        // An error rather than a warning, which is the one place this command
+        // raises its voice. Everything else it reports is a directory that has
+        // drifted from a set -- a thing to decide about. This is a component with
+        // no artwork behind it, which is a view that throws the first time it
+        // renders, and the fix is one command away.
+        if ($tally['unpublished'] > 0) {
+            $this->components->error(
+                "{$tally['unpublished']} icon(s) Shape's own components render are not published. ".
+                'Run `php artisan shape:install` or `php artisan shape:icon:add`.',
+            );
+        }
+
         $drifted = $tally['outdated']
             + $tally['edited']
             + $tally['forwards']
             + $tally['missing']
-            + $tally['skipped'];
+            + $tally['skipped']
+            + $tally['unpublished'];
 
         if ($this->option('strict') && $drifted > 0) {
             $this->components->error('Published icons are not up to date.');

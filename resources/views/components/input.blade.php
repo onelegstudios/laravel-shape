@@ -37,111 +37,48 @@
 
     $size ??= $defaults['size'] ?? 'md';
 
-    // Three places a field name can come from, in the order a reader would expect
-    // to find it: what this tag says, what it is bound to, and what the field
-    // around it was called. Local information beats inherited -- an input carrying
-    // its own binding is describing itself more precisely than its wrapper can.
-    //
-    // `name` is deliberately not a prop. It has to reach the rendered element for
-    // an ordinary HTML form to work at all, so it is read out of the bag and left
-    // in it -- unlike every other value this component consumes.
-    $own = $attributes->get('name');
-    $own = is_string($own) && $own !== '' ? $own : null;
-
-    // Livewire's binding is the only one a Livewire form usually writes. Modifiers
-    // ride on the attribute name rather than its value --
-    // `wire:model.live.debounce.300ms` -- so it is the prefix that has to be
-    // matched, not the whole key.
-    $model = $attributes->whereStartsWith('wire:model')->first();
-    $model = is_string($model) && $model !== '' ? $model : null;
-
-    $inherited = is_string($name) && $name !== '' ? $name : null;
-
-    $field = $own ?? $model ?? $inherited;
-
-    // A field that named itself names its control too, which is what makes
-    // `<shape:field name="email"><shape:input /></shape:field>` a complete
-    // statement rather than a control that submits nothing. Only where nothing
-    // else is already doing that job: a bound input has no use for the attribute,
-    // and one that wrote its own is not to be argued with.
-    $naming = $own === null && $model === null && $inherited !== null
-        ? ['name' => $inherited]
-        : [];
-
-    // The error bag decides, unless the call site says otherwise. A named `invalid`
-    // wins in both directions: `:invalid="true"` marks a field the validator has
-    // not seen yet, and `:invalid="false"` clears one it has.
-    //
-    // `$errors` is shared onto views by ShareErrorsFromSession, and a package
-    // cannot assume the middleware ran -- a Blade::render() outside the web group
-    // has no session, and neither does a mail template. Guarded rather than
-    // defaulted to an empty bag, which would report every field as valid in the one
-    // case where it cannot tell.
-    //
-    // Read through filter_var like the button's `loading`, so a `invalid="false"`
-    // from a template that stringified a variable does not read as broken.
-    $bad = $invalid !== null
-        ? filter_var($invalid, FILTER_VALIDATE_BOOLEAN)
-        : ($field !== null && isset($errors) && $errors->has($field));
-
-    // Where the description and the message will answer to, derived from the name
-    // rather than from the id below: those two components derive the same string in
-    // their own files, and the name is the only thing all three of them can see.
-    $slug = $field !== null ? (\Onelegstudios\Shape\Fields::id($field) ?: null) : null;
-
-    // The control's id, which is also what a label points `for` at. An explicit one
-    // wins, because a name that collides with something else on the page is exactly
-    // what it is for.
-    $given = $attributes->get('id');
-
-    $id = is_string($given) && $given !== '' ? $given : $slug;
-
     // Shorthand: any chrome prop expands this into a field. The control itself is
     // this same component called again with those props left off, which lands in
     // the bare branch below and stops -- one level, and no second copy of the
     // markup to keep in step with the first.
     $chrome = $label !== null || $description !== null || $descriptionTrailing !== null;
 
-    // A labelled control with no name has nothing to derive an id from, and a
-    // <label> pointing at nothing is worse than no label at all.
-    if ($chrome && $id === null) {
-        $id = uniqid('shape-field-');
-    }
+    // Which field this is, whether the validator minds, what id its label points
+    // at, and which of the sentences around it describe it -- four questions every
+    // control in this family has to answer, resolved in one place so a select and a
+    // checkbox do not each answer them again slightly differently. `Control` next
+    // to `Fields` in src/ has the rules and the reasons.
+    //
+    // `name` is deliberately not a prop. It has to reach the rendered element for
+    // an ordinary HTML form to work at all, so it stays on the bag -- read out of
+    // it below rather than taken from it, unlike every other value this component
+    // consumes.
+    //
+    // `$errors ?? null` rather than an `isset` branch: the bag is shared onto views
+    // by ShareErrorsFromSession, and a package cannot assume the middleware ran --
+    // a Blade::render() outside the web group has no session, and neither does a
+    // mail template. `??` does not warn on a variable that was never set, so the
+    // guard is the argument itself.
+    $resolved = \Onelegstudios\Shape\Control::resolve(
+        attributes: $attributes,
+        name: $name,
+        invalid: $invalid,
+        errors: $errors ?? null,
+        chrome: $chrome,
+        description: $description !== null,
+        descriptionTrailing: $descriptionTrailing !== null,
+    );
 
-    // The id is set in both shapes, because a label written by hand -- inside a
-    // composed field or in the call site's own markup -- needs something to point
-    // at, and the name is the only thing both halves can see.
-    $identity = $id !== null ? ['id' => $id] : [];
-
-    // Only ids that will exist, and only where this component knows they will.
-    // The shorthand rendered the description and the message itself, so it can say
-    // precisely which are there; the composed form cannot -- an anonymous parent
-    // cannot see which of its children drew something -- and a reference to an
-    // element that was never rendered is a finding rather than a courtesy. That
-    // gap is what the docs put in the composed example by hand.
-    $described = [];
-
-    if ($slug !== null && $description !== null) {
-        $described[] = $slug.'-description';
-    }
-
-    if ($slug !== null && $descriptionTrailing !== null) {
-        $described[] = $slug.'-description-trailing';
-    }
-
-    if ($slug !== null && $bad) {
-        $described[] = $slug.'-error';
-    }
-
-    $forward = $described !== []
-        ? array_merge($identity, ['aria-describedby' => implode(' ', $described)])
-        : $identity;
+    // Kept as a local because the recipe below reads it and the recursion passes
+    // it down: the shorthand has already settled the question, so the bare render
+    // inside it should not go back to the bag and settle it again.
+    $bad = $resolved->invalid;
 @endphp
 
 @if ($chrome)
     <x-shape::field
-        :name="$field"
-        :for="$id"
+        :name="$resolved->field"
+        :for="$resolved->id"
         :label="$label"
         :description="$description"
         :description-trailing="$descriptionTrailing"
@@ -150,7 +87,7 @@
              the package compiles for applications, and its own views should not
              need it to render. --}}
         <x-shape::input
-            {{ $attributes->merge($forward) }}
+            {{ $attributes->merge($resolved->forward()) }}
             :size="$size"
             :icon="$icon"
             :icon-trailing="$iconTrailing"
@@ -215,6 +152,33 @@
         // `outline-none` so the wrapper's ring is the only one drawn.
         $control = 'w-full min-w-0 border-0 bg-transparent p-0 text-ink placeholder:text-ink-muted focus:outline-none disabled:cursor-not-allowed disabled:text-ink-muted';
 
+        // The one piece of native chrome left in this component, and the only one
+        // Shape does not draw itself: the little calendar button Chromium puts in a
+        // date field. `picker` is a variant shape.css declares -- Tailwind names no
+        // such pseudo-element -- and what these three classes buy is a pointer
+        // cursor on a thing that is a button, and a glyph knocked back to the same
+        // visual weight as the trailing `text-ink-muted` mark in the field beside
+        // it. `picker:hover:` is the glyph hovered; `hover:picker:` would be the
+        // whole field.
+        //
+        // Nothing inverts it for dark mode. Chromium draws it from the element's
+        // `color-scheme`, which shape.css sets, so it already follows the theme.
+        //
+        // Gated on the type rather than always added, because the classes are inert
+        // on a text input and three dead ones on every field in every page is the
+        // kind of thing a reader stops on. Read off the bag before the `text`
+        // default below is merged, which is the only place the caller's own answer
+        // is visible.
+        $dated = in_array(
+            $attributes->get('type'),
+            ['date', 'datetime-local', 'month', 'time', 'week'],
+            true,
+        );
+
+        if ($dated) {
+            $control .= ' picker:cursor-pointer picker:opacity-60 picker:hover:opacity-100';
+        }
+
         // Guarded the way the button guards its own, and for the same reason: a
         // bare `<shape:input icon>` arrives as `true` and would go looking for an
         // icon named "1". A name with no artwork behind it stays the icon
@@ -232,9 +196,7 @@
 
         $control = $attributes->except('class')->merge(array_merge(
             ['type' => 'text', 'class' => $control.' '.$type[$rung]],
-            $identity,
-            $naming,
-            $bad ? ['aria-invalid' => 'true'] : [],
+            $resolved->attributes(),
         ));
     @endphp
 

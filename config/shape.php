@@ -35,6 +35,31 @@ return [
             'size' => 'md',
         ],
 
+        // Every other control in the family, on the same one axis and for the same
+        // reasons. Listed separately rather than sharing the input's key so that an
+        // application can put its checkboxes on a different rung from its text
+        // fields -- which is a real thing to want in a dense form, where the boxes
+        // read fine small and the fields do not.
+        'select' => [
+            'size' => 'md',
+        ],
+
+        'textarea' => [
+            'size' => 'md',
+        ],
+
+        'file' => [
+            'size' => 'md',
+        ],
+
+        'checkbox' => [
+            'size' => 'md',
+        ],
+
+        'radio' => [
+            'size' => 'md',
+        ],
+
         // The icon takes no defaults from here. It renders published components,
         // and folding those away at compile time is only safe while the component
         // reads nothing global -- a `size` default read from config would be
@@ -106,13 +131,27 @@ return [
         // one renders.
         //
         // Empty, because Shape already knows what the libraries it can install
-        // call these: the button's loading state asks for `spinner`, which is
-        // `loader-circle` in Lucide and `arrow-path` in Heroicons, the validation
+        // call these. The button's loading state asks for `spinner`, which is
+        // `loader-circle` in Lucide and `arrow-path` in Heroicons; the validation
         // message asks for `error`, which is `circle-alert` and
-        // `exclamation-circle`, and `shape:icon:add` reads that from the set it is
-        // publishing from. Those
+        // `exclamation-circle`; the select asks for `select-chevron`, which is
+        // `chevrons-up-down` and `chevron-up-down`; and the checkbox asks for
+        // `checkbox-check` and `checkbox-indeterminate`, which both libraries
+        // happen to spell `check` and `minus`. `shape:icon:add` reads all of that
+        // from the set it is publishing from. Those
         // names are also the ones `shape:install` publishes unasked, into the
         // default set alone, so a fresh install needs nothing here at all.
+        //
+        // The last two are worth a word, because their entries translate nothing.
+        // They are in the packaged table so that the package knows it needs them:
+        // `shape:install` publishes them, `shape:icon:check` reports them missing,
+        // and `shape:icon:remove` holds them back. Naming them for the component
+        // rather than the glyph is what lets you repoint the mark inside a checkbox
+        // without repointing every `<shape:icon name="check" />` you wrote
+        // yourself.
+        //
+        // The radio's dot is not here and never will be: it is two tokens of CSS
+        // in the component, because Heroicons ships no filled circle to point at.
         //
         // What belongs here is your own vocabulary, and any packaged name you
         // would rather point somewhere else:

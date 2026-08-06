@@ -337,7 +337,7 @@ it('asks which sets to install, which weights, and which one is the default', fu
         // Every name Shape's own views ask for, not just the first one: the list
         // is read from the alias table, so a component that starts drawing a new
         // mark is published by the same run without the installer being told.
-        ->expectsOutputToContain('shape:icon:add --set=solid error spinner')
+        ->expectsOutputToContain('shape:icon:add --set=solid checkbox-check checkbox-indeterminate error select-chevron spinner')
         ->doesntExpectOutputToContain('shape:icon:add --set=lucide')
         ->assertSuccessful();
 });

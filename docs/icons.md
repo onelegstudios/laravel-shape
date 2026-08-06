@@ -165,8 +165,17 @@ letting an unanswerable prompt fall back to its default and report success havin
 
 A few names are not yours to lose by accident: the [semantic names](#semantic-names) Shape's own
 components ask for, which `shape:install` publishes unasked so those components have artwork. Today
-those are `spinner`, which the button's loading state renders, and `error`, which the validation
-message renders. Removing one does not leave you short of an icon you chose — it leaves a button
+they are:
+
+| Name | Rendered by |
+|---|---|
+| `spinner` | the button's [loading state](components.md#button) |
+| `error` | the [validation message](components.md#input) |
+| `select-chevron` | the [select](components.md#select) |
+| `checkbox-check` | a checked [checkbox](components.md#checkbox) |
+| `checkbox-indeterminate` | an indeterminate one |
+
+Removing one does not leave you short of an icon you chose — it leaves a button
 rendering nothing mid-submit, or a form that throws at the moment it has something to report.
 
 So they are held back from every route into the command. `--all` sweeps around them, the prompt
@@ -283,11 +292,15 @@ php artisan shape:icon:check
   lucide/menu .............................................. edited
   lucide/trash (lucide-trash) .............................. missing from set
 
+  default/select-chevron ................................... not published
+
   INFO Checked 24 icon(s) in /app/resources/views/vendor/shape-icons.
   INFO 21 up to date.
   WARN 1 out of date. Run `php artisan shape:icon:update`.
   WARN 1 edited by hand. Updating overwrites the edit.
   WARN 1 icon(s) are no longer in their set. Remove them, or add them under their new names.
+  ERROR 1 icon(s) Shape's own components render are not published. Run
+        `php artisan shape:install` or `php artisan shape:icon:add`.
 ```
 
 | Report | What it means |
@@ -299,6 +312,24 @@ php artisan shape:icon:check
 | `forward out of date` | The icon is current, but its `default/` forward is missing or names another set. |
 | `missing from set` | The name no longer resolves. Named with the resolved name, as updating does. |
 | `not published` | You asked about a name that no set on disk has. |
+| `default/<name> — not published` | A name [Shape's own components render](#the-icons-shape-renders) has no artwork. |
+
+**The last row is the one that matters after an upgrade,** and it is the only absence any of these
+four verbs can see. `add` is driven by what you named, `remove` and `update` by what is already on
+disk — so a name that was never published is invisible to all three. When a Shape release starts
+drawing a mark it did not draw before, an application that has not re-run `shape:install` has a view
+that throws the first time that component renders. This is how you find out before a page does:
+
+```bash
+php artisan shape:icon:check --strict
+```
+
+Reported against `default/`, because that is the directory those components resolve through — they
+ask without a `set` prop. Artwork sitting in a set with no forward beside it is a directory nothing
+renders from, which is the same absence. It is reported whether or not you narrowed the run with
+`--set`, since what these names are missing from is not a set you can name; it is left out only when
+you asked about specific names, because a question about one icon does not want a paragraph about
+four others.
 
 **Telling an edit from an upgrade takes evidence**, because from the outside they are the same
 thing: bytes that differ from what the set renders now. So each published file carries a stamp,
@@ -324,6 +355,11 @@ one in CI with nobody at the terminal.
 reports. `--strict` is the opt-in gate, and it fails on anything that is not `up to date` —
 including a name you asked about that was never published, since in a scripted check that is
 usually a stale list rather than a stale icon.
+
+A missing semantic name is the one thing reported as an **error** rather than a warning. Everything
+else here is a directory that has drifted from a set, which is a thing to decide about; that is a
+shipped component with no artwork behind it, which is a page that breaks, and the fix is one command
+away.
 
 ## Where They Land
 
@@ -481,7 +517,8 @@ php artisan vendor:publish --tag=blade-icons
 
 Shape's own components can't name `loader-circle` or `arrow-path` directly — the package has no idea
 which library you installed. The button's [loading state](components.md#button) asks for
-`spinner` and the [validation message](components.md#input) asks for `error`, and the set each is
+`spinner`, the [validation message](components.md#input) asks for `error`, and the
+[select](components.md#select) asks for `select-chevron`; the set each is
 published from decides what those mean:
 
 ```blade
@@ -490,7 +527,20 @@ published from decides what those mean:
 
 <shape:icon name="error" />                    {{-- lucide-circle-alert --}}
 <shape:icon name="error" set="solid" />        {{-- heroicon-s-exclamation-circle --}}
+
+<shape:icon name="select-chevron" />           {{-- lucide-chevrons-up-down --}}
+<shape:icon name="select-chevron" set="solid" /> {{-- heroicon-s-chevron-up-down --}}
 ```
+
+Two of the five translate nothing: the [checkbox](components.md#checkbox)'s `checkbox-check` and
+`checkbox-indeterminate` are `check` and `minus` in both libraries. They are names anyway, and for
+two reasons. Being in the table is what makes the package publish and protect them — that is how
+`shape:install` knows a checkbox needs artwork. And naming them for the component rather than the
+glyph is what lets you repoint the mark inside a checkbox without repointing every
+`<shape:icon name="check" />` you wrote yourself.
+
+The [radio](components.md#radio)'s dot is not in the table and never will be: Heroicons ships no
+filled circle to point at, so it is drawn in CSS instead.
 
 Nothing in your config says either of those. Shape ships the names for the libraries it can
 [install](#the-sets-the-installer-offers), one table per library, which is what lets

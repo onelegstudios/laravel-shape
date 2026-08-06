@@ -121,6 +121,20 @@ describe('attributes', function () {
             ->not->toContain('type="text"');
     });
 
+    it('tames the native picker on a date field', function (string $type) {
+        // The one piece of native chrome left in this component. `picker` is a
+        // variant shape.css declares, because Tailwind names no such
+        // pseudo-element.
+        expect(control(Blade::render('<shape:input type="'.$type.'" />')))
+            ->toContain('picker:cursor-pointer')
+            ->toContain('picker:opacity-60');
+    })->with(['date', 'datetime-local', 'month', 'time', 'week']);
+
+    it('leaves the picker classes off a field that has no picker', function () {
+        // They are inert on a text input, which is not a reason to ship them.
+        expect(Blade::render('<shape:input type="email" />'))->not->toContain('picker:');
+    });
+
     it('hands the Livewire binding to the control untouched', function (string $binding) {
         expect(control(Blade::render('<shape:input '.$binding.'="email" />')))
             ->toContain($binding.'="email"');
