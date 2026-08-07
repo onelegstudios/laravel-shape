@@ -135,6 +135,9 @@ styles them with nothing at the call site saying "invalid". Override with `:inva
 **One rule to remember:** on the box-wrapped controls (`input`, `select`, `textarea`, `file`), `class`
 lands on the wrapper and every other attribute lands on the control. Use `max-w-*`, not `w-*`.
 
+`<shape:input type="hidden">` is the exception: it renders the bare `<input>` with no box, no derived
+id and no chrome, so a hidden field opens no gap in the form.
+
 `range` and `color` have no wrapper — the control is the box, so `class` lands on it directly. Both
 take the input's four heights, so a slider or a swatch stands level with the field beside it. A
 `color` is square and shows no hex; bind a `<shape:input>` to the same model to show the value. A

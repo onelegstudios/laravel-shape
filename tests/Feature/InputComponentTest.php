@@ -320,6 +320,77 @@ describe('shorthand', function () {
     });
 });
 
+describe('hidden', function () {
+    it('renders the control alone, with no box around it', function () {
+        // The box is the one thing every other type gets. A hidden input is not a
+        // control -- it is a value the form carries -- so there is nothing for a
+        // border to enclose, and drawing one puts an empty bordered strip in the
+        // form's flow.
+        $html = Blade::render('<shape:input type="hidden" name="token" />');
+
+        expect($html)
+            ->not->toContain('<div')
+            ->not->toContain('rounded-md')
+            ->not->toContain('border-neutral-border')
+            ->not->toContain('bg-surface');
+    });
+
+    it('hands the call site its own attributes back untouched', function () {
+        expect(trim(Blade::render('<shape:input type="hidden" name="token" value="abc" />')))
+            ->toBe('<input type="hidden" name="token" value="abc" />');
+    });
+
+    it('draws no chrome even when a chrome prop asked for it', function () {
+        // A <label> pointing at a control that cannot be seen or focused is worse
+        // than no label, and help text describes something the reader never meets.
+        $html = Blade::render('<shape:input type="hidden" name="token" label="Token" description="Carried through." />');
+
+        expect($html)
+            ->not->toContain('<label')
+            ->not->toContain('<div')
+            ->not->toContain('Token')
+            ->not->toContain('Carried through.');
+    });
+
+    it('derives no id, because nothing is going to point at one', function () {
+        expect(control(Blade::render('<shape:input type="hidden" name="token" />')))
+            ->not->toContain('id=');
+    });
+
+    it('follows an explicit id, which is on the bag like everything else', function () {
+        expect(control(Blade::render('<shape:input type="hidden" name="token" id="mine" />')))
+            ->toContain('id="mine"');
+    });
+
+    it('spends no generated id on a hidden input a label was aimed at', function () {
+        // `$chrome` is what makes Control::resolve() take one from the sequence, so
+        // the guard has to sit there rather than only on the branch below it. Two
+        // renders of the same tag agreeing is what proves nothing was consumed
+        // between them -- a burned id would show up as `shape-field-1` then
+        // `shape-field-2`.
+        $first = Blade::render('<shape:input type="hidden" label="Token" />');
+
+        expect(Blade::render('<shape:input type="hidden" label="Token" />'))->toBe($first)
+            ->and($first)->not->toContain('shape-field-');
+    });
+
+    it('says nothing about validity, having nothing to announce it to', function () {
+        // The error bag has an opinion; a hidden input has no way to present it and
+        // no assistive technology reaches it to hear one.
+        seedErrors(['token' => ['The token field is required.']]);
+
+        expect(control(Blade::render('<shape:input type="hidden" name="token" />')))
+            ->not->toContain('aria-invalid');
+    });
+
+    it('takes the box away from no other type', function (string $type) {
+        // The guard against a branch that broadens: only this one spelling skips
+        // the box, and `type="text"` is the default every unstated field lands on.
+        expect(Blade::render('<shape:input type="'.$type.'" name="token" />'))
+            ->toContain('border-neutral-border');
+    })->with(['text', 'email', 'password', 'search', 'number', 'date']);
+});
+
 describe('icon', function () {
     beforeEach(function () {
         File::deleteDirectory(TestCase::iconPath());
