@@ -110,6 +110,7 @@ it('leaves the field components on blade\'s own pipeline', function (string $tag
     'the file input' => ['<shape:file name="avatar" />'],
     'the checkbox' => ['<shape:checkbox name="terms" value="1" />'],
     'the radio' => ['<shape:radio name="plan" value="pro" />'],
+    'the switch' => ['<shape:switch name="notify" />'],
     'the field' => ['<shape:field name="email"><shape:input /></shape:field>'],
     'the label' => ['<shape:label>Email</shape:label>'],
     'the description' => ['<shape:description>Help</shape:description>'],

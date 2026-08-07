@@ -23,7 +23,10 @@ it('loads the package translations', function () {
 
 it('loads the package views', function (string $component) {
     expect(view()->exists('shape::components.'.$component))->toBeTrue();
-})->with(['button', 'icon', 'input', 'field', 'label', 'description', 'error']);
+})->with([
+    'button', 'icon', 'field', 'label', 'description', 'error',
+    'input', 'select', 'textarea', 'file', 'checkbox', 'radio', 'switch',
+]);
 
 it('registers the artisan commands', function () {
     $registered = array_keys(Artisan::all());
