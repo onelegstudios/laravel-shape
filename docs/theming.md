@@ -153,6 +153,43 @@ overriding one if you want to keep them independent:
 }
 ```
 
+## Pseudo-element Variants
+
+Three controls are partly drawn by the browser rather than by Shape: the date field's picker
+button, the range slider's track and thumb, and the colour input's swatch. Tailwind names none
+of those pseudo-elements, so the theme declares a variant for each — which is what lets the
+components style them with ordinary tokens instead of the package writing rules into your
+stylesheet.
+
+| Variant | Pseudo-element | Support |
+|---|---|---|
+| `picker` | `::-webkit-calendar-picker-indicator` | Chromium |
+| `track` | `::-webkit-slider-runnable-track`, `::-moz-range-track` | All |
+| `thumb` | `::-webkit-slider-thumb`, `::-moz-range-thumb` | All |
+| `webkit-thumb` | `::-webkit-slider-thumb` | Chromium |
+| `swatch` | `::-webkit-color-swatch`, `::-moz-color-swatch` | All |
+| `swatch-wrapper` | `::-webkit-color-swatch-wrapper` | Chromium |
+
+They are yours to use too — a slider of your own takes `thumb:size-5 thumb:bg-ocean-fill` the
+same way Shape's does. Two things to know if you write similar variants for a part this list
+does not cover.
+
+**Declare each browser's selector as its own rule.** Every engine drops a whole rule when any
+selector in its list is one it does not recognise, so a comma list pairing a `-webkit-` and a
+`-moz-` pseudo-element applies in *neither* browser. The block form is what avoids that:
+
+```css
+@custom-variant thumb {
+    &::-webkit-slider-thumb { @slot; }
+    &::-moz-range-thumb { @slot; }
+}
+```
+
+**Order the prefixes state-first.** Variants apply left to right, so `focus-visible:thumb:` is
+the thumb of a focused slider and `thumb:focus-visible:` is a pseudo-element asked to match
+`:focus-visible`, which never happens. The same rule governs Tailwind's built-in `file:` —
+`disabled:file:`, not `file:disabled:`.
+
 ## Read next
 
 - [Components](components.md) — the props that consume these roles

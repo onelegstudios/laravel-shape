@@ -26,6 +26,7 @@ it('loads the package views', function (string $component) {
 })->with([
     'button', 'icon', 'field', 'label', 'description', 'error',
     'input', 'select', 'textarea', 'file', 'checkbox', 'radio', 'switch',
+    'range', 'color',
 ]);
 
 it('registers the artisan commands', function () {

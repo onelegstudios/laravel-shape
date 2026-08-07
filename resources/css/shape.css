@@ -242,29 +242,82 @@
 /* ---------------------------------------------------------------------------
    Layer 4: variants for pseudo-elements Tailwind does not name
 
-   One entry, and it exists because `::-webkit-calendar-picker-indicator` is the
-   only piece of native chrome any Shape control still draws. There is no utility
-   variant for it, so the alternative was a hand-written rule in this file --
-   which would mean a package reaching into every date input in the consuming
-   application, and styling that lives in a stylesheet rather than in the
-   component that opts into it.
+   Three controls in this library are made of parts the browser owns: the date
+   field's picker button, the range slider's track and thumb, and the colour
+   input's swatch. Tailwind names none of those pseudo-elements, so the
+   alternative was hand-written rules in this file -- which would mean a package
+   reaching into every date and range input in the consuming application, and
+   styling that lives in a stylesheet rather than in the component that opts into
+   it.
 
-   Declared as a variant instead, the affordance is three ordinary tokens on the
-   control: `picker:cursor-pointer picker:opacity-60 picker:hover:opacity-100`.
-   The glyph is a button that inherits the field's text cursor, and it is drawn at
-   full contrast in a colour Shape does not control -- so it reads louder than the
-   trailing `text-ink-muted` mark in the field beside it until it is knocked back.
+   Declared as variants instead, each part is addressed with ordinary tokens on
+   the control: `picker:opacity-60`, `track:bg-neutral-tint`,
+   `thumb:bg-primary-fill`, `swatch:border-0`. Nothing here paints anything; a
+   component that never writes one of these prefixes gets no rule from it.
 
-   Nothing here inverts it for dark mode, and nothing needs to: Chromium draws the
-   indicator from the element's `color-scheme`, which the block below sets. The
-   usual `filter: invert(1)` fix cannot be expressed in `light-dark()` and would
-   have needed a `dark:` class this library does not have.
+   Dark mode needs nothing special. Every colour these variants can be handed is a
+   surface token, and the one glyph Shape does not paint -- the picker indicator --
+   Chromium draws from the element's `color-scheme`, which the block below sets.
+   The usual `filter: invert(1)` fix cannot be expressed in `light-dark()` and
+   would have needed a `dark:` class this library does not have.
 
-   Chromium only. Firefox draws no such control and Safari exposes no such
-   pseudo-element, so the classes are inert there rather than wrong.
+   The block form on the paired variants is load-bearing rather than stylistic.
+   Written the obvious way --
+
+       @custom-variant thumb (&::-webkit-slider-thumb, &::-moz-range-thumb);
+
+   -- both selectors land in one list, and every engine drops a whole rule when
+   any selector in its list is one it does not recognise. Chromium would throw the
+   rule away over the Firefox selector and Firefox over the Chromium one, so a
+   slider would render styled in neither. The block form emits a separate rule per
+   selector, which is what keeps each engine's own.
+
+   `webkit-thumb` is the odd one, and it exists for a single class. Chromium seats
+   the thumb on the *top edge* of the track's box, so centring it takes a negative
+   `margin-top` of half the difference between the two. Firefox centres
+   `::-moz-range-thumb` on the track itself and would read that same margin as a
+   shove upwards -- which is why the offset cannot ride along in `thumb`.
+
+   `picker`, `webkit-thumb` and `swatch-wrapper` are Chromium only. Firefox and
+   Safari either draw no such part or expose no such pseudo-element, so those
+   classes are inert there rather than wrong.
    --------------------------------------------------------------------------- */
 
 @custom-variant picker (&::-webkit-calendar-picker-indicator);
+
+@custom-variant track {
+    &::-webkit-slider-runnable-track {
+        @slot;
+    }
+
+    &::-moz-range-track {
+        @slot;
+    }
+}
+
+@custom-variant thumb {
+    &::-webkit-slider-thumb {
+        @slot;
+    }
+
+    &::-moz-range-thumb {
+        @slot;
+    }
+}
+
+@custom-variant webkit-thumb (&::-webkit-slider-thumb);
+
+@custom-variant swatch {
+    &::-webkit-color-swatch {
+        @slot;
+    }
+
+    &::-moz-color-swatch {
+        @slot;
+    }
+}
+
+@custom-variant swatch-wrapper (&::-webkit-color-swatch-wrapper);
 
 /* light-dark() resolves against `color-scheme`, so declaring both here is what
    makes the surface tokens follow the operating system. Setting the scheme on an

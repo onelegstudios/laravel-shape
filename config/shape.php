@@ -69,6 +69,21 @@ return [
             'size' => 'md',
         ],
 
+        // The two controls the browser draws part of. The rung buys the same thing
+        // it buys everywhere else -- these take the input's four outer heights, so a
+        // slider or a swatch stands level with the field beside it -- but it is
+        // worth naming them separately for the opposite reason to the switch's: a
+        // slider and a swatch are the controls most likely to sit in a settings
+        // panel rather than in a form, where an application may well want them
+        // roomier than the fields it runs dense.
+        'range' => [
+            'size' => 'md',
+        ],
+
+        'color' => [
+            'size' => 'md',
+        ],
+
         // The icon takes no defaults from here. It renders published components,
         // and folding those away at compile time is only safe while the component
         // reads nothing global -- a `size` default read from config would be
