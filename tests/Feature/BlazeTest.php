@@ -121,6 +121,15 @@ it('leaves the field components on blade\'s own pipeline', function (string $tag
     'the legend' => ['<shape:legend>Plan</shape:legend>'],
     'the description' => ['<shape:description>Help</shape:description>'],
     'the error' => ['<shape:error name="email" />'],
+    // Blaze is opt-in, so a file with no directive is already here and these two
+    // cases are what stops one being added later. The affix pair has a reason of its
+    // own beyond the family's, spelled out at the top of input/prefix.blade.php: the
+    // input renders them from inside its own template, where the component stack has
+    // already been popped, and only Blade's `getConsumableComponentData` looks at
+    // `currentComponentData` before walking ancestors. Compiled by Blaze they would
+    // find nothing there and quietly size every affix from config.
+    'the prefix' => ['<shape:input.prefix>$</shape:input.prefix>'],
+    'the suffix' => ['<shape:input.suffix>USD</shape:input.suffix>'],
 ]);
 
 it('memoizes neither component', function () {

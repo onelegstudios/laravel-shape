@@ -20,6 +20,7 @@ php artisan vendor:publish --tag="shape-config"
 
     'input' => [
         'size' => 'md',
+        'affix' => 'inline',
     ],
 
     'select' => ['size' => 'md'],
@@ -32,13 +33,16 @@ php artisan vendor:publish --tag="shape-config"
 ],
 ```
 
-The input has one key because it has one styling axis. There is no `variant`: an input is not
-competing for attention the way a button is, so there is no emphasis ladder to put it on. There
-is no `color` either — the only thing an input's colour ever says is whether the value is wrong,
-and that is read from the validator rather than named at a call site. See
-[Components](components.md#input).
+Neither of the input's two keys is emphasis. There is no `variant`: an input is not competing for
+attention the way a button is, so there is no emphasis ladder to put it on. There is no `color`
+either — the only thing an input's colour ever says is whether the value is wrong, and that is
+read from the validator rather than named at a call site. `affix` is which of two shapes the ends
+of the field have when a `prefix` or a `suffix` is given, `inline` or `segmented`, and it is here
+because it is a house style: an application that sets its currency fields on a plate wants all of
+them on a plate. It buys nothing on a field with no affix. See
+[Components](components.md#prefix-and-suffix).
 
-Every other control is on that same one axis, listed separately rather than sharing the input's
+Every other control is on the one size axis, listed separately rather than sharing the input's
 key. That is so an application can put its checkboxes on a different rung from its text fields —
 a real thing to want in a dense form, where the boxes read fine small and the fields do not — and
 its settings-page switches on a different rung again.

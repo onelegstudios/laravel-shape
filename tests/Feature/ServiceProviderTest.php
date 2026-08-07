@@ -27,6 +27,10 @@ it('loads the package views', function (string $component) {
     'button', 'icon', 'field', 'label', 'description', 'error',
     'input', 'select', 'textarea', 'file', 'checkbox', 'radio', 'switch',
     'range', 'color',
+    // The only nested pair, and the only two views in a subdirectory. A dot in the
+    // view name is a directory separator, which is the whole of what makes
+    // <shape:input.prefix> resolve.
+    'input.prefix', 'input.suffix',
 ]);
 
 it('registers the artisan commands', function () {

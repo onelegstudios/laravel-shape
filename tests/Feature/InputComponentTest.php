@@ -18,6 +18,19 @@ function control(string $html): string
     return $matches[0] ?? '';
 }
 
+/**
+ * The affix spans, out of the box and the control that sit between them. Narrowed
+ * for `control()`'s reason and one more: the box and the control render the same
+ * classes whether there is an affix or not, so a whole-render assertion would pass
+ * on a class that landed on the wrong element -- or on no element at all.
+ */
+function affixes(string $html): string
+{
+    preg_match_all('/<span\b[^>]*>.*?<\/span>/s', $html, $matches);
+
+    return implode('', $matches[0]);
+}
+
 it('renders a text input inside the box that carries its border', function () {
     $html = Blade::render('<shape:input />');
 
@@ -63,20 +76,24 @@ it('stands on the padding its button rung stands on', function (string $size) {
 })->with(['xs', 'sm', 'md', 'lg']);
 
 it('does not leak the styling props onto the rendered elements', function () {
-    $html = Blade::render('<shape:input size="lg" icon-set="fixture" :invalid="false" />');
+    $html = Blade::render('<shape:input size="lg" icon-set="fixture" affix="segmented" prefix="$" :invalid="false" />');
 
     expect($html)
         ->not->toContain('size="lg"')
         ->not->toContain('icon-set=')
+        ->not->toContain('affix=')
+        ->not->toContain('prefix=')
         ->not->toContain('invalid=');
 });
 
 describe('config', function () {
     it('takes the value of every unnamed prop from config', function () {
-        config()->set('shape.components.input', ['size' => 'lg']);
+        config()->set('shape.components.input', ['size' => 'lg', 'affix' => 'segmented']);
 
-        expect(Blade::render('<shape:input />'))
-            ->toBe(Blade::render('<shape:input size="lg" />'));
+        // An affix is on the tag because `affix` has nothing to style without one,
+        // which is the only reason the two renders are not bare inputs.
+        expect(Blade::render('<shape:input prefix="$" />'))
+            ->toBe(Blade::render('<shape:input size="lg" affix="segmented" prefix="$" />'));
     });
 
     it('ships config defaults that match the fallbacks baked into the component', function () {
@@ -476,5 +493,318 @@ describe('icon', function () {
     it('ignores a bare icon attribute rather than looking for an icon named 1', function () {
         expect(Blade::render('<shape:input icon />'))
             ->toBe(Blade::render('<shape:input />'));
+    });
+});
+
+describe('prefix and suffix', function () {
+    it('puts a prefix before the control and a suffix after it', function () {
+        $html = Blade::render('<shape:input prefix="$" suffix="USD" />');
+
+        expect($html)->toContain('$')->toContain('USD')
+            ->and(strpos($html, '$'))->toBeLessThan(strpos($html, '<input'))
+            ->and(strpos($html, '<input'))->toBeLessThan(strpos($html, 'USD'));
+    });
+
+    it('escapes a string affix, which came off an attribute', function () {
+        expect(Blade::render('<shape:input :prefix="$mark" />', ['mark' => '<b>x</b>']))
+            ->toContain('&lt;b&gt;x&lt;/b&gt;')
+            ->not->toContain('<b>x</b>');
+    });
+
+    it('takes markup a string cannot carry from the nested component', function () {
+        // The escape hatch. `<shape:input.prefix>` is a component like every other
+        // part of a field, rather than the named slot this used to be -- which was
+        // the one place in the package that syntax appeared.
+        expect(Blade::render('<shape:input><shape:input.prefix><b>x</b></shape:input.prefix></shape:input>'))
+            ->toContain('<b>x</b>');
+    });
+
+    it('renders the prop and the nested component identically', function () {
+        // The prop is a call into the same component, so there is one recipe rather
+        // than two -- and this is the assertion that says so. Only the span is
+        // compared: the two land in different places in the DOM on purpose, and the
+        // `order-*` class on each is what puts them in the same place on screen.
+        expect(affixes(Blade::render('<shape:input><shape:input.suffix>USD</shape:input.suffix></shape:input>')))
+            ->toBe(affixes(Blade::render('<shape:input suffix="USD" />')));
+    });
+
+    it('draws both where a call site writes a prop and nests one too', function () {
+        // Not the nearer one winning, which is what the named slot used to do. An
+        // anonymous component cannot see what its children rendered -- the same
+        // limitation the composed field's `aria-describedby` runs into -- so the
+        // input has no way to know the slot drew a prefix and stand its own down.
+        // Pinned so it stays a documented consequence rather than a surprise.
+        $html = Blade::render('<shape:input prefix="attribute"><shape:input.prefix>nested</shape:input.prefix></shape:input>');
+
+        expect($html)->toContain('attribute')->toContain('nested')
+            ->and(substr_count($html, 'order-first'))->toBe(2);
+    });
+
+    it('ignores the named slot the nested component replaced', function () {
+        // `<x-slot:prefix>` is not an API any more, and the way it fails is worth
+        // pinning: Blade still fills `$prefix` with a `ComponentSlot`, which the
+        // string guard drops -- and `@props` consumed the `prefix` attribute on the
+        // same pass, so a call site writing both loses both. Nothing shipped with
+        // the slot in it, so this is a pin rather than a deprecation.
+        expect(affixes(Blade::render('<shape:input prefix="$"><x-slot:prefix>x</x-slot:prefix></shape:input>')))
+            ->toBe('');
+    });
+
+    it('renders the nested component as a span, which the assertions here rely on', function () {
+        // `affixes()` narrows on `<span>`. A `<div>` in either component would leave
+        // every `not->toContain` in this block passing against an empty string.
+        expect(Blade::render('<shape:input><shape:input.prefix>$</shape:input.prefix></shape:input>'))
+            ->toContain('<span')
+            ->and(Blade::render('<shape:input><shape:input.suffix>USD</shape:input.suffix></shape:input>'))
+            ->toContain('<span');
+    });
+
+    it('sizes a nested affix to the field it is standing in', function (string $size, string $type) {
+        // `@aware` reaching up to the input, which is the whole reason these are
+        // components rather than markup the call site styles itself.
+        expect(affixes(Blade::render('<shape:input size="'.$size.'"><shape:input.suffix>USD</shape:input.suffix></shape:input>')))
+            ->toContain($type);
+    })->with([
+        'xs' => ['xs', 'text-xs'],
+        'sm' => ['sm', 'text-sm'],
+        'md' => ['md', 'text-sm'],
+        'lg' => ['lg', 'text-base'],
+    ]);
+
+    it('takes the treatment from the field as well', function () {
+        expect(affixes(Blade::render('<shape:input affix="segmented"><shape:input.suffix>USD</shape:input.suffix></shape:input>')))
+            ->toContain('self-stretch');
+    });
+
+    it('keeps the two values it inherits off the rendered element', function () {
+        // Neither is declared a prop -- declaring one would let `@aware` beat a value
+        // written on the tag, which is the wrong way round -- so nothing strips them
+        // from the bag and the component has to do it by hand.
+        expect(affixes(Blade::render('<shape:input><shape:input.suffix size="lg" affix="segmented">USD</shape:input.suffix></shape:input>')))
+            ->toContain('text-base')
+            ->toContain('self-stretch')
+            ->not->toContain('size="lg"')
+            ->not->toContain('affix=');
+    });
+
+    it('renders on its own outside any field', function () {
+        // No input above it, so nothing to inherit and nothing to attach to. It falls
+        // back to the configured rung and the `inline` floor, which is what keeps a
+        // stray one a plain muted word rather than a plate bleeding out of whatever
+        // it landed in.
+        expect(Blade::render('<shape:input.prefix>$</shape:input.prefix>'))
+            ->toContain('text-ink-muted')
+            ->not->toContain('-my-');
+    });
+
+    it('draws no nested affix on a hidden input', function () {
+        expect(trim(Blade::render('<shape:input type="hidden" name="token"><shape:input.suffix>USD</shape:input.suffix></shape:input>')))
+            ->toBe('<input type="hidden" name="token" />');
+    });
+
+    it('sets an affix in the same type the value is set in', function (string $size) {
+        // The one number this component shares with a table in another file. Read out
+        // of both renders rather than restated, the way the input's padding is read
+        // against the button's, so the claim breaks loudly if either copy moves.
+        $html = Blade::render('<shape:input size="'.$size.'" suffix="USD" />');
+
+        preg_match('/(text-(?:xs|sm|base|lg))/', control($html), $control);
+        preg_match('/(text-(?:xs|sm|base|lg))/', affixes($html), $affix);
+
+        expect($affix[1])->toBe($control[1]);
+    })->with(['xs', 'sm', 'md', 'lg']);
+
+    it('ignores a bare prefix attribute rather than stamping a 1 on the field', function () {
+        // The one that would ship visibly wrong: a bare attribute arrives as `true`,
+        // and `(string) true` is "1".
+        expect(Blade::render('<shape:input prefix suffix />'))
+            ->toBe(Blade::render('<shape:input />'));
+    });
+
+    it('keeps a zero, which is an affix like any other', function () {
+        // Why the guard is `trim(...) !== ''` and not `empty()`.
+        expect(affixes(Blade::render('<shape:input suffix="0" />')))->toContain('>0<');
+    });
+
+    it('sizes the affix to the rung the field resolved', function (string $size, string $type) {
+        // The bargain the icon props make, made once more: the call site says the
+        // size once, so a `$` cannot end up a size larger than the number beside it.
+        expect(affixes(Blade::render('<shape:input prefix="$" size="'.$size.'" />')))->toContain($type);
+    })->with([
+        'xs' => ['xs', 'text-xs'],
+        'sm' => ['sm', 'text-sm'],
+        'md' => ['md', 'text-sm'],
+        'lg' => ['lg', 'text-base'],
+    ]);
+
+    it('draws no field around a control whose only extra is an affix', function () {
+        // There is no label, no help text and no message in a `$`, so an affix is
+        // not a chrome prop and does not expand the shorthand.
+        expect(Blade::render('<shape:input prefix="$" name="amount" />'))
+            ->not->toContain('<label')
+            ->not->toContain('flex flex-col');
+    });
+
+    it('carries both through the shorthand', function () {
+        // `@props` strips them off the bag, so the field branch has to forward them
+        // by name the way it forwards the icons -- and a slot survives the trip as
+        // an ordinary prop value.
+        expect(Blade::render('<shape:input label="Price" prefix="$" suffix="USD" name="price" />'))
+            ->toContain('<label')
+            ->and(affixes(Blade::render('<shape:input label="Price" prefix="$" suffix="USD" name="price" />')))
+            ->toContain('$')
+            ->toContain('USD');
+    });
+
+    it('renders no affix on a hidden input', function () {
+        // Nothing to hang one on. The box is what an affix sits in, and a hidden
+        // input has none -- the same reason it draws no label.
+        expect(trim(Blade::render('<shape:input type="hidden" name="token" prefix="$" suffix="USD" />')))
+            ->toBe('<input type="hidden" name="token" />');
+    });
+
+    describe('segmented', function () {
+        it('leaves the box alone in the inline treatment', function () {
+            // The seam the wrapper shape was cut for: an inline affix is an ordinary
+            // flex sibling, so nothing has to move to make room for it. No plate, no
+            // bleed -- `order-*` is not in this list, because it is unconditional.
+            expect(Blade::render('<shape:input prefix="$" suffix="USD" />'))
+                ->not->toContain('-my-')
+                ->not->toContain('-ms-')
+                ->not->toContain('-me-')
+                ->not->toContain('self-stretch')
+                ->not->toContain('border-inherit')
+                ->not->toContain('rounded-s-md')
+                ->not->toContain('rounded-e-md');
+        });
+
+        it('gives the affix a plate against the frame border', function () {
+            expect(affixes(Blade::render('<shape:input prefix="$" affix="segmented" />')))
+                ->toContain('self-stretch')
+                ->toContain('bg-surface-muted')
+                ->toContain('border-e')
+                ->toContain('rounded-s-md');
+        });
+
+        it('centres the plate, which stretching would otherwise not', function () {
+            // `self-stretch` blockifies the span, so without these the affix sits at
+            // the top of a box a whole `py` taller than the line it belongs on.
+            expect(affixes(Blade::render('<shape:input suffix="USD" affix="segmented" />')))
+                ->toContain('flex')
+                ->toContain('items-center');
+        });
+
+        it('bleeds by the rung the field resolved', function (string $size, string $start, string $end) {
+            // Every number is the rung's own: the frame's `py` cancelled, its leading
+            // padding cancelled, its padding restored on the plate, and one more gap
+            // to put the value the same distance from the divider that it sits from
+            // the border in a plain field.
+            $html = affixes(Blade::render('<shape:input prefix="$" suffix="USD" affix="segmented" size="'.$size.'" />'));
+
+            expect($html)->toContain($start)->toContain($end);
+        })->with([
+            'xs' => ['xs', '-my-1 -ms-2 px-2 me-1', '-my-1 -me-2 px-2 ms-1'],
+            'sm' => ['sm', '-my-1.5 -ms-3 px-3 me-1.5', '-my-1.5 -me-3 px-3 ms-1.5'],
+            'md' => ['md', '-my-2 -ms-4 px-4 me-2', '-my-2 -me-4 px-4 ms-2'],
+            'lg' => ['lg', '-my-2.5 -ms-5 px-5 me-2.5', '-my-2.5 -me-5 px-5 ms-2.5'],
+        ]);
+
+        it('cancels exactly the padding the frame put there, and tops the gap back up', function (string $size) {
+            // The most valuable test in this file, now that the plate's table lives
+            // in another one. Nothing in `input/prefix.blade.php` names the input's
+            // `$rungs`, so these two renders are the only place the relationship is
+            // written down: the plate cancels the frame's `px` to reach the border,
+            // and adds the frame's `gap` back so the value stands the same distance
+            // from the divider that it stands from the border in a plain field.
+            //
+            // Read out of both renders rather than restated, so the claim breaks
+            // loudly if either table is edited alone.
+            $plain = Blade::render('<shape:input size="'.$size.'" />');
+            $plate = affixes(Blade::render('<shape:input prefix="$" affix="segmented" size="'.$size.'" />'));
+
+            preg_match('/(?<!-)\bpx-([\d.]+)/', $plain, $padding);
+            preg_match('/\bgap-([\d.]+)/', $plain, $gap);
+            preg_match('/-ms-([\d.]+)/', $plate, $cancel);
+            preg_match('/(?<!-)\bme-([\d.]+)/', $plate, $topUp);
+
+            expect($cancel[1])->toBe($padding[1])
+                ->and($topUp[1])->toBe($gap[1]);
+        })->with(['xs', 'sm', 'md', 'lg']);
+
+        it('orders every affix out to its own edge, in both treatments', function () {
+            // Unconditional, and forced rather than chosen: the prop renders this
+            // component from inside the box while a call site nests the same one in
+            // the slot, so one set of classes has to land it correctly from two
+            // different places in the markup. Ordering it to the edge is the only
+            // answer that works from both -- which is also why an affix sits outside
+            // a leading mark rather than beside the value.
+            expect(affixes(Blade::render('<shape:input prefix="$" suffix="USD" />')))
+                ->toContain('order-first')
+                ->toContain('order-last')
+                ->and(affixes(Blade::render('<shape:input prefix="$" suffix="USD" affix="segmented" />')))
+                ->toContain('order-first')
+                ->toContain('order-last');
+        });
+
+        it('inherits the divider colour rather than working it out', function () {
+            // The decision that made a nested affix possible at all. The divider has
+            // to be the frame's border colour, and a component in the slot cannot
+            // work that out -- the input often resolves `invalid` from `wire:model`,
+            // and `@aware` cannot read a key that is not a legal PHP variable name.
+            //
+            // Not optional, either: Preflight sets `border: 0 solid`, and that
+            // shorthand resets `border-color` to `currentColor`, so leaving it off
+            // draws the divider in the affix's own muted ink rather than not at all.
+            seedErrors(['amount' => ['The amount field is required.']]);
+
+            expect(affixes(Blade::render('<shape:input prefix="$" affix="segmented" name="amount" />')))
+                ->toContain('border-inherit')
+                ->not->toContain('border-danger-border')
+                ->and(affixes(Blade::render('<shape:input prefix="$" affix="segmented" name="total" />')))
+                ->toContain('border-inherit')
+                ->not->toContain('border-neutral-border');
+        });
+
+        it('follows a border colour the call site put on the field', function () {
+            // What inheriting earns on the way past, and a bug the hardcoded colour
+            // it replaced actually had: the frame took the caller's green and the
+            // divider stayed the packaged grey.
+            $html = Blade::render('<shape:input prefix="$" affix="segmented" class="border-emerald-500" />');
+
+            expect($html)->toContain('border-emerald-500')
+                ->and(affixes($html))->toContain('border-inherit');
+        });
+
+        it('never puts the ring on the plate, only on the box', function () {
+            expect(affixes(Blade::render('<shape:input prefix="$" affix="segmented" />')))
+                ->not->toContain('focus-within:');
+        });
+
+        it('takes its treatment from config', function () {
+            config()->set('shape.components.input', ['affix' => 'segmented']);
+
+            expect(Blade::render('<shape:input prefix="$" />'))
+                ->toBe(Blade::render('<shape:input prefix="$" affix="segmented" />'));
+        });
+
+        it('ships a config default that matches the fallback baked into the component', function () {
+            $configured = Blade::render('<shape:input prefix="$" />');
+
+            config()->set('shape.components.input', null);
+
+            expect(Blade::render('<shape:input prefix="$" />'))->toBe($configured);
+        });
+
+        it('falls back to inline when given a treatment it does not have', function (string $affix) {
+            // A closed set of two. `affix` is the one prop here whose name reads like
+            // it takes the affix itself, so `affix="$"` is a plausible slip and lands
+            // on a plain field rather than an unstyled plate.
+            expect(Blade::render('<shape:input prefix="$" affix="'.$affix.'" />'))
+                ->toBe(Blade::render('<shape:input prefix="$" />'));
+        })->with([
+            'a treatment that does not exist' => ['plate'],
+            'the affix itself, reaching for the wrong prop' => ['$'],
+            'a boolean that was stringified on the way in' => ['true'],
+        ]);
     });
 });
