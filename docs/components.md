@@ -219,6 +219,20 @@ own `w-full` and the stylesheet's order decides which wins — as it does on the
 an explicit one overrides it — which is what you want when a name collides with something else
 on the page.
 
+One type is not a control at all, and Shape treats it that way. `type="hidden"` renders the
+bare `<input>` and nothing else — no box, no derived id, no `aria-invalid`, and no label or
+help text even if you pass one, because there is nothing there to see or point at:
+
+```blade
+<shape:input type="hidden" name="token" value="{{ $token }}" />
+```
+
+```html
+<input type="hidden" name="token" value="…" />
+```
+
+So a hidden field can sit among the visible ones without opening a gap in the form.
+
 ### One gap, in the composed form
 
 The shorthand wires `aria-describedby` because it rendered the description and the message

@@ -37,11 +37,22 @@
 
     $size ??= $defaults['size'] ?? 'md';
 
+    // Read off the bag before the `text` default is merged below, which is the only
+    // place a call site's own answer is visible. Matched exactly, the way the three
+    // native-chrome types are matched further down -- `type="Hidden"` is not a
+    // spelling this file recognises anywhere else either.
+    $hidden = $attributes->get('type') === 'hidden';
+
     // Shorthand: any chrome prop expands this into a field. The control itself is
     // this same component called again with those props left off, which lands in
     // the bare branch below and stops -- one level, and no second copy of the
     // markup to keep in step with the first.
-    $chrome = $label !== null || $description !== null || $descriptionTrailing !== null;
+    //
+    // A hidden input never expands, whatever the call site asked for, and the guard
+    // belongs here rather than only in the branch: `Control::resolve()` spends a
+    // generated id when `$chrome` is true and nothing named the field, and an id
+    // handed to an element that renders no label is one nothing points at.
+    $chrome = ! $hidden && ($label !== null || $description !== null || $descriptionTrailing !== null);
 
     // Which field this is, whether the validator minds, what id its label points
     // at, and which of the sentences around it describe it -- four questions every
@@ -75,7 +86,18 @@
     $bad = $resolved->invalid;
 @endphp
 
-@if ($chrome)
+@if ($hidden)
+    {{-- The whole bag, and nothing else. A hidden input is not a control -- it is a
+         value the form carries -- so there is no box to draw, no label to point at
+         it, no id to derive and nothing for a validator to announce.
+
+         `@props` has already taken the styling props off the bag, so what is left is
+         what the call site wrote: the type, the name, the value, a binding, an
+         explicit id. A `class` among them is passed through rather than dropped --
+         it is inert on an element with no box, and removing it would be this
+         component editing markup it was handed. --}}
+    <input {{ $attributes }} />
+@elseif ($chrome)
     <x-shape::field
         :name="$resolved->field"
         :for="$resolved->id"
