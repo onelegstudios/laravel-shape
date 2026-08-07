@@ -60,6 +60,15 @@ return [
             'size' => 'md',
         ],
 
+        // The switch is a checkbox underneath and takes the checkbox's rungs, but
+        // it gets a key of its own rather than reading that one: the two are the
+        // same control only in the markup. An application that runs its forms
+        // dense and its settings pages roomy wants to say so once, here, rather
+        // than at every call site.
+        'switch' => [
+            'size' => 'md',
+        ],
+
         // The icon takes no defaults from here. It renders published components,
         // and folding those away at compile time is only safe while the component
         // reads nothing global -- a `size` default read from config would be

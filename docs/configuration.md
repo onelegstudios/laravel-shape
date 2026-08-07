@@ -22,6 +22,13 @@ php artisan vendor:publish --tag="shape-config"
         'size' => 'md',
     ],
 
+    'select' => ['size' => 'md'],
+    'textarea' => ['size' => 'md'],
+    'file' => ['size' => 'md'],
+    'checkbox' => ['size' => 'md'],
+    'radio' => ['size' => 'md'],
+    'switch' => ['size' => 'md'],
+
 ],
 ```
 
@@ -30,6 +37,11 @@ competing for attention the way a button is, so there is no emphasis ladder to p
 is no `color` either — the only thing an input's colour ever says is whether the value is wrong,
 and that is read from the validator rather than named at a call site. See
 [Components](components.md#input).
+
+Every other control is on that same one axis, listed separately rather than sharing the input's
+key. That is so an application can put its checkboxes on a different rung from its text fields —
+a real thing to want in a dense form, where the boxes read fine small and the fields do not — and
+its settings-page switches on a different rung again.
 
 The icon takes no defaults from here. It renders published components, and folding those away
 at compile time is only safe while the component reads nothing global — a `size` read from

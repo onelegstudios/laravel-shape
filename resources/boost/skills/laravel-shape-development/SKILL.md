@@ -83,7 +83,7 @@ Two syntaxes, same components: `<shape:button>` and `<x-shape::button>`.
 
 An icon-only button needs an `aria-label`; Shape will not invent one.
 
-**Form controls** — `input`, `select`, `textarea`, `checkbox`, `radio`, `file`. All take `size`,
+**Form controls** — `input`, `select`, `textarea`, `checkbox`, `radio`, `switch`, `file`. All take `size`,
 `invalid`, and the `label`/`description`/`description-trailing` shorthand that assembles a whole
 field:
 
@@ -100,7 +100,13 @@ field:
 <shape:file label="Avatar" accept="image/*" wire:model="avatar" />
 
 <shape:checkbox label="Email me about releases" wire:model="notify" value="1" />
+
+<shape:switch label="Enable two-factor authentication" wire:model.live="twoFactor" />
 ```
+
+A `switch` is `<input type="checkbox" role="switch">` underneath. Use one where flipping it applies
+the setting, a checkbox where the value is submitted with the form. Unlike a checkbox, its `value`
+is not folded into the id — a switch is never one of a group.
 
 Groups of checkboxes or radios go inside a field, which carries the name and prints one message:
 
@@ -143,7 +149,7 @@ parts cannot see which of them rendered:
 php artisan vendor:publish --tag="shape-config"
 ```
 
-`config/shape.php` has `components.{button,input,select,textarea,checkbox,radio,file}` (a `size`
+`config/shape.php` has `components.{button,input,select,textarea,checkbox,radio,switch,file}` (a `size`
 each, plus `variant` and `color` on the button) and `icons.{path,set,sets,aliases}`. Config is merged
 one level deep, so a published file replaces each block wholesale — do not delete keys from it.
 
