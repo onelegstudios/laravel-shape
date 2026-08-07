@@ -37,11 +37,21 @@
 
     $size ??= $defaults['size'] ?? 'md';
 
-    // Read off the bag before the `text` default is merged below, which is the only
-    // place a call site's own answer is visible. Matched exactly, the way the three
-    // native-chrome types are matched further down -- `type="Hidden"` is not a
-    // spelling this file recognises anywhere else either.
-    $hidden = $attributes->get('type') === 'hidden';
+    // The caller's own type, read off the bag before the `text` default is merged
+    // below -- the only place their answer is visible. Every branch in this file
+    // that asks what type it is holding asks this, so the question is settled once.
+    //
+    // Lowercased, because HTML matches an input's type case-insensitively: a browser
+    // reads `type="Hidden"` as a hidden input whatever this file makes of the
+    // spelling, and the four branches downstream should agree with the browser
+    // rather than with each other. `is_string` first because a bare `type` attribute
+    // arrives as `true`, which is not a string to lowercase.
+    //
+    // Kept out of `$type` further down, which is already the type *scale*.
+    $kind = $attributes->get('type');
+    $kind = is_string($kind) ? strtolower($kind) : null;
+
+    $hidden = $kind === 'hidden';
 
     // Shorthand: any chrome prop expands this into a field. The control itself is
     // this same component called again with those props left off, which lands in
@@ -196,12 +206,8 @@
         //
         // Gated on the type rather than always added, because the classes are inert
         // on a text input and five dead ones on every field in every page is the
-        // kind of thing a reader stops on. Read off the bag before the `text`
-        // default below is merged, which is the only place the caller's own answer
-        // is visible -- and kept out of `$type`, which is already the type *scale*
-        // a few lines up.
-        $kind = $attributes->get('type');
-
+        // kind of thing a reader stops on. `$kind` is the caller's own type, read
+        // and lowercased at the top of the file.
         if (in_array($kind, ['date', 'datetime-local', 'month', 'time', 'week'], true)) {
             $control .= ' picker:cursor-pointer picker:opacity-60 picker:hover:opacity-100';
         } elseif ($kind === 'number') {

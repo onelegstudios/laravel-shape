@@ -155,6 +155,26 @@ describe('attributes', function () {
         'the search field\'s cancel button' => ['search', 'cancel'],
     ]);
 
+    it('reads the type the way a browser reads it, whatever the case', function (string $type, string $variant) {
+        // HTML matches an input's type case-insensitively, so `type="Date"` is a date
+        // field to the browser and has the calendar button to prove it. The four
+        // branches in this component that ask what type they are holding lowercase
+        // the answer first, so they agree with the browser rather than with the
+        // spelling.
+        expect(control(Blade::render('<shape:input type="'.$type.'" />')))
+            ->toContain($variant.':cursor-pointer');
+    })->with([
+        'a capitalised date' => ['Date', 'picker'],
+        'a shouted number' => ['NUMBER', 'spinner'],
+        'a mixed-case search' => ['SeArCh', 'cancel'],
+    ]);
+
+    it('renders the type the call site spelled rather than the one it matched', function () {
+        // Lowercasing settles the comparison, not the markup. The attribute is the
+        // caller's to write.
+        expect(control(Blade::render('<shape:input type="Email" />')))->toContain('type="Email"');
+    });
+
     it('leaves the chrome classes off a field that has no chrome', function (string $variant) {
         // They are inert on a text input, which is not a reason to ship them.
         expect(Blade::render('<shape:input type="email" />'))->not->toContain($variant.':');
@@ -382,6 +402,16 @@ describe('hidden', function () {
         expect(control(Blade::render('<shape:input type="hidden" name="token" />')))
             ->not->toContain('aria-invalid');
     });
+
+    it('skips the box whatever case the type was spelled in', function (string $type) {
+        // The one where getting it wrong is visible: a browser reads `type="Hidden"`
+        // as a hidden input, and a component that did not would put an empty bordered
+        // strip in the form.
+        expect(Blade::render('<shape:input type="'.$type.'" name="token" />'))
+            ->not->toContain('<div')
+            ->and(control(Blade::render('<shape:input type="'.$type.'" name="token" />')))
+            ->toContain('type="'.$type.'"');
+    })->with(['Hidden', 'HIDDEN', 'hIdDeN']);
 
     it('takes the box away from no other type', function (string $type) {
         // The guard against a branch that broadens: only this one spelling skips
