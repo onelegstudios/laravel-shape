@@ -122,17 +122,54 @@ describe('attributes', function () {
     });
 
     it('tames the native picker on a date field', function (string $type) {
-        // The one piece of native chrome left in this component. `picker` is a
-        // variant shape.css declares, because Tailwind names no such
-        // pseudo-element.
+        // Native chrome this component does not draw itself. `picker` is a variant
+        // shape.css declares, because Tailwind names no such pseudo-element.
         expect(control(Blade::render('<shape:input type="'.$type.'" />')))
             ->toContain('picker:cursor-pointer')
             ->toContain('picker:opacity-60');
     })->with(['date', 'datetime-local', 'month', 'time', 'week']);
 
-    it('leaves the picker classes off a field that has no picker', function () {
+    it('gives the other two native controls the cursor a button should have', function (string $type, string $class) {
+        expect(control(Blade::render('<shape:input type="'.$type.'" />')))->toContain($class);
+    })->with([
+        'the number field\'s spin buttons' => ['number', 'spinner:cursor-pointer'],
+        'the search field\'s cancel button' => ['search', 'cancel:cursor-pointer'],
+    ]);
+
+    it('never dims the two parts Chromium hides on its own', function (string $type, string $variant) {
+        // The load-bearing test in this file, and the one worth reading the reason
+        // for. Chromium keeps the spin buttons and the cancel button hidden until
+        // the field is hovered. An author `opacity` on either overrides that rest
+        // state and pins the part visible -- so copying the picker's
+        // `opacity-60 hover:opacity-100` across, which is the obvious way to make
+        // these three branches look symmetrical, would leave a stepper sitting in
+        // every number field on the page. Louder than doing nothing, not quieter.
+        //
+        // The picker earns its knock-back because Chromium draws that glyph at full
+        // contrast always. There is no rest state there to preserve.
+        expect(control(Blade::render('<shape:input type="'.$type.'" />')))
+            ->toContain($variant.':cursor-pointer')
+            ->not->toContain($variant.':opacity');
+    })->with([
+        'the number field\'s spin buttons' => ['number', 'spinner'],
+        'the search field\'s cancel button' => ['search', 'cancel'],
+    ]);
+
+    it('leaves the chrome classes off a field that has no chrome', function (string $variant) {
         // They are inert on a text input, which is not a reason to ship them.
-        expect(Blade::render('<shape:input type="email" />'))->not->toContain('picker:');
+        expect(Blade::render('<shape:input type="email" />'))->not->toContain($variant.':');
+    })->with(['picker', 'spinner', 'cancel']);
+
+    it('gives each type only its own chrome', function () {
+        // Three branches reading one attribute, so the thing worth pinning is that
+        // they stay mutually exclusive: a date field has no stepper to style and a
+        // number field has no calendar button.
+        expect(control(Blade::render('<shape:input type="number" />')))
+            ->not->toContain('picker:')
+            ->not->toContain('cancel:')
+            ->and(control(Blade::render('<shape:input type="date" />')))
+            ->not->toContain('spinner:')
+            ->not->toContain('cancel:');
     });
 
     it('hands the Livewire binding to the control untouched', function (string $binding) {

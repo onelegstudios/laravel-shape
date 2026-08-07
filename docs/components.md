@@ -559,22 +559,34 @@ around the colour itself; the component clears all three so the value fills the 
 Safari draws its own colour well and honours `appearance: none` unevenly, so expect it to look a
 little more like the operating system there.
 
-## Date and time fields
+## Fields the browser adds a control to
 
-`<shape:input type="date">` is an ordinary input, with one addition. Chromium draws a calendar button
-inside the field at full contrast, in a colour Shape does not control, so it reads louder than a
-trailing mark in the field beside it. The component knocks it back to the same visual weight and
-gives it the pointer cursor a button should have:
+Three input types come with a small control the browser draws itself: `date` and its relatives get a
+calendar button, `number` gets a pair of spin buttons, and `search` gets a cancel button. All three
+are ordinary inputs, with one addition each.
 
 ```blade
 <shape:input label="Starts" type="datetime-local" name="starts_at" />
+<shape:input label="Quantity" type="number" name="quantity" />
+<shape:input label="Search" type="search" name="q" />
 ```
 
-It follows dark mode for free — Chromium draws that glyph from the element's `color-scheme`, which
-Shape's theme already sets — so there is no inverted filter and no `dark:` class involved. Firefox
-draws no such control and Safari exposes no such pseudo-element, so the styling is inert there
-rather than wrong. Nothing short of a JavaScript date picker makes these fields look the same across
-browsers, and Shape does not pretend otherwise.
+Each of those controls gets the pointer cursor a button should have. Only the calendar button is
+dimmed, and the difference is worth knowing about if you are styling one of these yourself.
+Chromium draws the calendar glyph at full contrast the whole time, in a colour Shape does not
+control, so it reads louder than a trailing mark in the field beside it — the component knocks it
+back to the same visual weight. The spin buttons and the cancel button need no such help: Chromium
+already hides them until you hover the field. Dimming those would *override* that and leave a
+stepper sitting in every number field, so Shape leaves their visibility to the browser.
+
+The calendar button follows dark mode for free — Chromium draws that glyph from the element's
+`color-scheme`, which Shape's theme already sets — so there is no inverted filter and no `dark:`
+class involved. Firefox draws no such control and Safari exposes no such pseudo-element, so that
+styling is inert there rather than wrong. Safari does draw its own steppers and cancel button and
+shows them all the time rather than on hover.
+
+Nothing short of a JavaScript date picker makes these fields look the same across browsers, and
+Shape does not pretend otherwise.
 
 ## Icon
 
