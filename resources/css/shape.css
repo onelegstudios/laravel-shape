@@ -242,13 +242,13 @@
 /* ---------------------------------------------------------------------------
    Layer 4: variants for pseudo-elements Tailwind does not name
 
-   Three controls in this library are made of parts the browser owns: the date
-   field's picker button, the range slider's track and thumb, and the colour
-   input's swatch. Tailwind names none of those pseudo-elements, so the
-   alternative was hand-written rules in this file -- which would mean a package
-   reaching into every date and range input in the consuming application, and
-   styling that lives in a stylesheet rather than in the component that opts into
-   it.
+   Several controls in this library are made of parts the browser owns: the date
+   field's picker button, the number field's spin buttons, the search field's
+   cancel button, the range slider's track and thumb, and the colour input's
+   swatch. Tailwind names none of those pseudo-elements, so the alternative was
+   hand-written rules in this file -- which would mean a package reaching into
+   every date and range input in the consuming application, and styling that
+   lives in a stylesheet rather than in the component that opts into it.
 
    Declared as variants instead, each part is addressed with ordinary tokens on
    the control: `picker:opacity-60`, `track:bg-neutral-tint`,
@@ -278,12 +278,30 @@
    `::-moz-range-thumb` on the track itself and would read that same margin as a
    shove upwards -- which is why the offset cannot ride along in `thumb`.
 
+   `spinner` and `cancel` are declared for one property each, and what they leave
+   out is the point. Chromium keeps both parts hidden until the field is hovered,
+   and an author `opacity` on either -- `opacity-60` included -- overrides that
+   rest state and pins the part visible in every number and search field on the
+   page. Knocking them back the way `picker` is knocked back would make them
+   louder than the browser's own default, not quieter. `cursor` is the one
+   property that does not disturb the reveal, so it is the only one they take.
+
+   The picker is the opposite case, and the reason it reads differently: Chromium
+   draws that glyph at full contrast always, so there is no rest state to
+   preserve and the knock-back has to be written by hand.
+
    `picker`, `webkit-thumb` and `swatch-wrapper` are Chromium only. Firefox and
    Safari either draw no such part or expose no such pseudo-element, so those
-   classes are inert there rather than wrong.
+   classes are inert there rather than wrong. `spinner` and `cancel` are WebKit's
+   own and Safari honours both -- persistently, since it does not hide either part
+   at rest, which costs nothing when the only declaration is a cursor.
    --------------------------------------------------------------------------- */
 
 @custom-variant picker (&::-webkit-calendar-picker-indicator);
+
+@custom-variant spinner (&::-webkit-inner-spin-button);
+
+@custom-variant cancel (&::-webkit-search-cancel-button);
 
 @custom-variant track {
     &::-webkit-slider-runnable-track {

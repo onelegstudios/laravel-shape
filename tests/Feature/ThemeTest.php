@@ -247,7 +247,7 @@ it('names every pseudo-element its components reach for', function (string $vari
     // and the part stays native. Which is the failure the picker variant exists to
     // avoid in the first place.
     expect(shapeThemeRules())->toContain('@custom-variant '.$variant);
-})->with(['picker', 'track', 'thumb', 'webkit-thumb', 'swatch', 'swatch-wrapper']);
+})->with(['picker', 'spinner', 'cancel', 'track', 'thumb', 'webkit-thumb', 'swatch', 'swatch-wrapper']);
 
 it('declares each engine\'s pseudo-element as its own rule', function () {
     // The one thing in layer 4 that is silently wrong rather than loudly wrong.

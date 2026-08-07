@@ -81,17 +81,23 @@ return [
             ]),
         ],
         [
-            // The one piece of native chrome left in this component. Chromium draws a
-            // calendar button in a date field at full contrast, in a colour the
-            // component does not control, so it reads louder than a trailing mark in
-            // the field beside it -- these knock it back to the same weight and give
-            // it the pointer cursor a button should have. Firefox and Safari draw no
-            // such thing, so the classes are inert rather than wrong there.
-            'title' => 'Date fields, and the native picker knocked back',
+            // The native chrome this component does not draw itself. All three types
+            // get the pointer cursor a button should have; only the calendar glyph is
+            // dimmed, because Chromium draws that one at full contrast the whole time
+            // while it hides the stepper and the cancel button until the field is
+            // hovered -- hover the last two to see them. Dimming those would override
+            // the hiding and leave them sitting there, which is the louder answer.
+            //
+            // Firefox and Safari draw no calendar button, so that styling is inert
+            // rather than wrong there. Search needs a value before Chromium draws a
+            // cancel button at all, hence the one below.
+            'title' => 'Fields the browser adds a control to',
             'source' => implode("\n", [
                 '<shape:input type="date" class="max-w-3xs" />',
                 '<shape:input type="time" class="max-w-3xs" />',
                 '<shape:input label="Starts" type="datetime-local" name="starts_at" class="max-w-3xs" />',
+                '<shape:input type="number" value="42" class="max-w-3xs" />',
+                '<shape:input type="search" value="Hover me" class="max-w-3xs" />',
             ]),
         ],
         [

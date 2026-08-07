@@ -152,31 +152,40 @@
         // `outline-none` so the wrapper's ring is the only one drawn.
         $control = 'w-full min-w-0 border-0 bg-transparent p-0 text-ink placeholder:text-ink-muted focus:outline-none disabled:cursor-not-allowed disabled:text-ink-muted';
 
-        // The one piece of native chrome left in this component, and the only one
-        // Shape does not draw itself: the little calendar button Chromium puts in a
-        // date field. `picker` is a variant shape.css declares -- Tailwind names no
-        // such pseudo-element -- and what these three classes buy is a pointer
-        // cursor on a thing that is a button, and a glyph knocked back to the same
-        // visual weight as the trailing `text-ink-muted` mark in the field beside
-        // it. `picker:hover:` is the glyph hovered; `hover:picker:` would be the
-        // whole field.
+        // The native chrome this component does not draw itself: the calendar button
+        // Chromium puts in a date field, the spin buttons it puts in a number field,
+        // and the cancel button it puts in a search field. `picker`, `spinner` and
+        // `cancel` are variants shape.css declares, because Tailwind names no such
+        // pseudo-elements.
         //
-        // Nothing inverts it for dark mode. Chromium draws it from the element's
-        // `color-scheme`, which shape.css sets, so it already follows the theme.
+        // All three get the pointer cursor a button should have. Only the picker is
+        // knocked back, and the asymmetry is deliberate rather than an oversight:
+        // Chromium draws the calendar glyph at full contrast always, so it reads
+        // louder than the trailing `text-ink-muted` mark in the field beside it and
+        // has to be dimmed by hand. The spinner and the cancel button are already
+        // hidden until the field is hovered -- an `opacity` here would override that
+        // rest state and pin them visible, which is louder than doing nothing at
+        // all. `cursor` is the one property that leaves the reveal alone.
+        //
+        // `picker:hover:` is the glyph hovered; `hover:picker:` would be the whole
+        // field. Nothing inverts any of it for dark mode: Chromium draws these from
+        // the element's `color-scheme`, which shape.css sets, so they already follow
+        // the theme.
         //
         // Gated on the type rather than always added, because the classes are inert
-        // on a text input and three dead ones on every field in every page is the
+        // on a text input and five dead ones on every field in every page is the
         // kind of thing a reader stops on. Read off the bag before the `text`
         // default below is merged, which is the only place the caller's own answer
-        // is visible.
-        $dated = in_array(
-            $attributes->get('type'),
-            ['date', 'datetime-local', 'month', 'time', 'week'],
-            true,
-        );
+        // is visible -- and kept out of `$type`, which is already the type *scale*
+        // a few lines up.
+        $kind = $attributes->get('type');
 
-        if ($dated) {
+        if (in_array($kind, ['date', 'datetime-local', 'month', 'time', 'week'], true)) {
             $control .= ' picker:cursor-pointer picker:opacity-60 picker:hover:opacity-100';
+        } elseif ($kind === 'number') {
+            $control .= ' spinner:cursor-pointer';
+        } elseif ($kind === 'search') {
+            $control .= ' cancel:cursor-pointer';
         }
 
         // Guarded the way the button guards its own, and for the same reason: a
