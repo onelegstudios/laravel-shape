@@ -83,9 +83,9 @@ Two syntaxes, same components: `<shape:button>` and `<x-shape::button>`.
 
 An icon-only button needs an `aria-label`; Shape will not invent one.
 
-**Form controls** — `input`, `select`, `textarea`, `checkbox`, `radio`, `switch`, `file`. All take `size`,
-`invalid`, and the `label`/`description`/`description-trailing` shorthand that assembles a whole
-field:
+**Form controls** — `input`, `select`, `textarea`, `checkbox`, `radio`, `switch`, `file`, `range`,
+`color`. All take `size`, `invalid`, and the `label`/`description`/`description-trailing` shorthand
+that assembles a whole field:
 
 ```blade
 <shape:input label="Email" description="We never share it." type="email" wire:model="email" />
@@ -102,6 +102,10 @@ field:
 <shape:checkbox label="Email me about releases" wire:model="notify" value="1" />
 
 <shape:switch label="Enable two-factor authentication" wire:model.live="twoFactor" />
+
+<shape:range label="Volume" min="0" max="100" wire:model="volume" />
+
+<shape:color label="Brand colour" wire:model="brand" />
 ```
 
 A `switch` is `<input type="checkbox" role="switch">` underneath. Use one where flipping it applies
@@ -131,6 +135,11 @@ styles them with nothing at the call site saying "invalid". Override with `:inva
 **One rule to remember:** on the box-wrapped controls (`input`, `select`, `textarea`, `file`), `class`
 lands on the wrapper and every other attribute lands on the control. Use `max-w-*`, not `w-*`.
 
+`range` and `color` have no wrapper — the control is the box, so `class` lands on it directly. Both
+take the input's four heights, so a slider or a swatch stands level with the field beside it. A
+`color` is square and shows no hex; bind a `<shape:input>` to the same model to show the value. A
+`range` has no filled portion — CSS cannot read a slider's value, and Shape ships no JavaScript.
+
 **Compose by hand** when the shorthand cannot say it. Add `aria-describedby` yourself here — the
 parts cannot see which of them rendered:
 
@@ -159,8 +168,8 @@ The parts are `<shape:field>`, `<shape:label>`, `<shape:legend>`, `<shape:descri
 php artisan vendor:publish --tag="shape-config"
 ```
 
-`config/shape.php` has `components.{button,input,select,textarea,checkbox,radio,switch,file}` (a `size`
-each, plus `variant` and `color` on the button) and `icons.{path,set,sets,aliases}`. Config is merged
+`config/shape.php` has `components.{button,input,select,textarea,checkbox,radio,switch,file,range,color}`
+(a `size` each, plus `variant` and `color` on the button) and `icons.{path,set,sets,aliases}`. Config is merged
 one level deep, so a published file replaces each block wholesale — do not delete keys from it.
 
 Rebrand through the theme rather than the config or the views:

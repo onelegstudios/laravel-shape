@@ -28,6 +28,17 @@ function shapeTheme(): string
     return shapeFile('resources/css/shape.css');
 }
 
+/**
+ * The theme with its comments taken out. Layer 4 explains itself partly by quoting
+ * the spelling it exists to avoid, so anything asserting on the shape of a
+ * declaration has to read the declarations rather than the prose around them --
+ * the same rule the button matrix above follows for the opposite reason.
+ */
+function shapeThemeRules(): string
+{
+    return (string) preg_replace('#/\*.*?\*/#s', '', shapeTheme());
+}
+
 function shapeFile(string $path): string
 {
     return (string) file_get_contents(__DIR__.'/../../'.$path);
@@ -228,6 +239,62 @@ it('keeps the warning role legible by inverting its solid fill', function () {
         ->toContain('--color-warning-fill: var(--color-warning-400)')
         ->toContain('--color-warning-on-fill: var(--color-warning-950)')
         ->toContain('--color-primary-on-fill: var(--color-white)');
+});
+
+it('names every pseudo-element its components reach for', function (string $variant) {
+    // A variant a component writes and the theme never declares is not a build
+    // error: Tailwind emits nothing for the prefix, the class lands in the markup,
+    // and the part stays native. Which is the failure the picker variant exists to
+    // avoid in the first place.
+    expect(shapeThemeRules())->toContain('@custom-variant '.$variant);
+})->with(['picker', 'track', 'thumb', 'webkit-thumb', 'swatch', 'swatch-wrapper']);
+
+it('declares each engine\'s pseudo-element as its own rule', function () {
+    // The one thing in layer 4 that is silently wrong rather than loudly wrong.
+    // Written as a selector list --
+    //
+    //     @custom-variant thumb (&::-webkit-slider-thumb, &::-moz-range-thumb);
+    //
+    // -- both selectors land in one list, and every engine drops a whole rule when
+    // any selector in its list is one it does not recognise. Chromium throws it away
+    // over the Firefox selector and Firefox over the Chromium one, so the slider
+    // renders styled in neither and the markup looks identical either way.
+    preg_match_all('/@custom-variant\s+[a-z-]+\s+\(([^)]*)\)/', shapeThemeRules(), $matches);
+
+    $mixed = array_values(array_filter(
+        $matches[1],
+        static fn (string $selectors): bool => str_contains($selectors, '-webkit-')
+            && str_contains($selectors, '-moz-'),
+    ));
+
+    expect($mixed)->toBe([]);
+});
+
+it('keeps the Chromium thumb offset off the thumb Firefox centres itself', function () {
+    // `webkit-thumb` exists for one class, and this is why: Chromium seats the thumb
+    // on the top edge of the track's box, while Firefox centres `::-moz-range-thumb`
+    // on the track and would read the same negative margin as a shove upwards.
+    expect(shapeThemeRules())->toContain('@custom-variant webkit-thumb (&::-webkit-slider-thumb)')
+        ->and(Blade::render('<shape:range />'))
+        ->toContain('webkit-thumb:-mt-')
+        ->not->toMatch('/(?<![-\w])thumb:-mt-/');
+});
+
+it('documents the variants it declares', function () {
+    // Layer 4 is the one part of the theme a consumer has to be told about: the
+    // names are not derivable from Tailwind's own, and a slider of their own wants
+    // the same hooks Shape's uses.
+    $documented = shapeFile('docs/theming.md');
+
+    preg_match_all('/@custom-variant\s+([a-z-]+)/', shapeThemeRules(), $matches);
+
+    $undocumented = array_values(array_filter(
+        array_unique($matches[1]),
+        static fn (string $variant): bool => ! str_contains($documented, '`'.$variant.'`'),
+    ));
+
+    expect($matches[1])->not->toBeEmpty()
+        ->and($undocumented)->toBe([]);
 });
 
 it('orders the colour-scheme rules so a root-level dark class still wins', function () {

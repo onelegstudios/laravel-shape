@@ -111,6 +111,8 @@ it('leaves the field components on blade\'s own pipeline', function (string $tag
     'the checkbox' => ['<shape:checkbox name="terms" value="1" />'],
     'the radio' => ['<shape:radio name="plan" value="pro" />'],
     'the switch' => ['<shape:switch name="notify" />'],
+    'the range' => ['<shape:range name="volume" />'],
+    'the colour input' => ['<shape:color name="brand" />'],
     'the field' => ['<shape:field name="email"><shape:input /></shape:field>'],
     'the field as a group' => ['<shape:field name="plan" legend="Plan"><shape:radio value="free" /></shape:field>'],
     'the label' => ['<shape:label>Email</shape:label>'],
