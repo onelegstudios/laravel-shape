@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Testing\PendingCommand;
+use Onelegstudios\Shape\Icons\Libraries;
 use Onelegstudios\Shape\Tests\TestCase;
 
 // The same bargain as the sibling suites: the provider reads the icon path when
@@ -292,6 +293,12 @@ it('warns when the named set has nothing published in it', function () {
 });
 
 it('succeeds on a clean directory with --strict', function () {
+    // Clean means both halves: nothing has drifted, *and* every name Shape's own
+    // views ask for is on disk. A directory holding one icon of a consumer's own
+    // choosing is not clean -- it is a directory where the button's spinner has no
+    // artwork behind it.
+    publishRequiredIcons();
+
     stageIcon(['name' => ['check']])->assertSuccessful();
 
     checkIcons(['--strict' => true])->assertSuccessful();
@@ -397,4 +404,85 @@ it('changes nothing, even where everything is wrong', function () {
     }
 
     expect($after)->toBe($before);
+});
+
+describe('the icons Shape renders', function () {
+    // The one absence this command can see and the acting verbs cannot. `add` is
+    // driven by what a caller named, `remove` and `update` by what a directory
+    // already holds, so a name that was never published is invisible to all three
+    // -- and a component that starts drawing a new mark leaves an application
+    // that has not re-run `shape:install` with a view that throws.
+
+    it('names every one that is not published', function () {
+        stageIcon(['name' => ['check']])->assertSuccessful();
+
+        $report = checkIcons();
+
+        foreach (Libraries::required() as $name) {
+            $report->expectsOutputToContain('default/'.$name);
+        }
+
+        $report
+            ->expectsOutputToContain("5 icon(s) Shape's own components render are not published.")
+            ->assertSuccessful();
+    });
+
+    it('says so even when nothing at all is published', function () {
+        // The emptiest directory is the one where the most is about to break, so
+        // it must not also be the quietest report.
+        checkIcons()
+            ->expectsOutputToContain('No icons are published.')
+            ->expectsOutputToContain("5 icon(s) Shape's own components render are not published.")
+            ->assertSuccessful();
+    });
+
+    it('fails --strict', function () {
+        // Which is the point of the whole addition: a CI run should be able to
+        // catch this before a page does.
+        checkIcons(['--strict' => true])
+            ->expectsOutputToContain('Published icons are not up to date.')
+            ->assertFailed();
+    });
+
+    it('stays quiet once they are published', function () {
+        publishRequiredIcons();
+
+        checkIcons()
+            ->doesntExpectOutputToContain("Shape's own components render are not published")
+            ->assertSuccessful();
+    });
+
+    it('reads the forward rather than the set the artwork sits in', function () {
+        // Those views ask without a `set` prop, so `default/` is what answers.
+        // Artwork in a set with no forward beside it is a directory nothing
+        // renders from, which is the same absence.
+        publishRequiredIcons();
+
+        File::delete($this->iconPath.'/default/spinner.blade.php');
+
+        checkIcons()
+            ->expectsOutputToContain('default/spinner')
+            ->expectsOutputToContain("1 icon(s) Shape's own components render are not published.")
+            ->assertSuccessful();
+    });
+
+    it('leaves a run narrowed to one name alone', function () {
+        // `check spinner` is a question about one icon. Answering it with a
+        // paragraph about four others is the report nobody asked for.
+        stageIcon(['name' => ['check']])->assertSuccessful();
+
+        checkIcons(['name' => ['check']])
+            ->doesntExpectOutputToContain("Shape's own components render are not published")
+            ->assertSuccessful();
+    });
+
+    it('still reports them when the rows were narrowed to one set', function () {
+        // `--set` narrows which directories are swept. What these names are
+        // missing from is `default/`, which is not a set a caller can name.
+        stageIcon(['name' => ['check']])->assertSuccessful();
+
+        checkIcons(['--set' => 'lucide'])
+            ->expectsOutputToContain("5 icon(s) Shape's own components render are not published.")
+            ->assertSuccessful();
+    });
 });

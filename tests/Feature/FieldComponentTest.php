@@ -162,6 +162,35 @@ describe('label', function () {
             ->toContain('uppercase')
             ->toContain('font-medium');
     });
+
+    it('follows a rung when one is named', function (string $size, string $type) {
+        // The checkbox is what names one: its label sits on the same line as the
+        // box, so the row's line box is whatever the label sets.
+        expect(Blade::render('<shape:label size="'.$size.'">Email</shape:label>'))
+            ->toContain($type.' font-medium');
+    })->with([
+        'xs' => ['xs', 'text-xs'],
+        'sm' => ['sm', 'text-sm'],
+        'md' => ['md', 'text-sm'],
+        'lg' => ['lg', 'text-base'],
+    ]);
+
+    it('stays at the field size when no rung was named', function () {
+        // In a field the label is a line of its own and does not follow the
+        // control's scale, so unnamed has to render exactly what it always did.
+        expect(Blade::render('<shape:label>Email</shape:label>'))
+            ->toContain('text-sm font-medium');
+    });
+
+    it('falls back to the field size for a rung it does not have', function () {
+        expect(Blade::render('<shape:label size="huge">Email</shape:label>'))
+            ->toBe(Blade::render('<shape:label>Email</shape:label>'));
+    });
+
+    it('does not leak the rung onto the element', function () {
+        expect(Blade::render('<shape:label size="lg">Email</shape:label>'))
+            ->not->toContain('size=');
+    });
 });
 
 describe('description', function () {
@@ -174,6 +203,21 @@ describe('description', function () {
         $html = Blade::render('<shape:field name="email"><shape:description id="mine">Help</shape:description></shape:field>');
 
         expect($html)->toContain('id="mine"')->not->toContain('id="email-description"');
+    });
+
+    it('follows the label\'s rung when one is named', function (string $size, string $type) {
+        expect(Blade::render('<shape:description size="'.$size.'">Help</shape:description>'))
+            ->toContain($type.' text-ink-muted');
+    })->with([
+        'xs' => ['xs', 'text-xs'],
+        'sm' => ['sm', 'text-sm'],
+        'md' => ['md', 'text-sm'],
+        'lg' => ['lg', 'text-base'],
+    ]);
+
+    it('stays at the field size when no rung was named', function () {
+        expect(Blade::render('<shape:description>Help</shape:description>'))
+            ->toContain('text-sm text-ink-muted');
     });
 });
 

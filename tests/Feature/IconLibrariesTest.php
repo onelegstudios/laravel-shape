@@ -60,7 +60,29 @@ it('names an icon each installed set actually has', function (string $set) {
 it('lists the names Shape asks for once, whichever library spells them', function () {
     // The keys, not what they resolve to: the published file is named for the
     // name that asked for it, so both libraries contribute the same one entry.
-    expect(Libraries::required())->toBe(['error', 'spinner']);
+    expect(Libraries::required())->toBe([
+        'checkbox-check',
+        'checkbox-indeterminate',
+        'error',
+        'select-chevron',
+        'spinner',
+    ]);
+});
+
+it('spells every name it asks for in both libraries', function () {
+    // The asymmetry nothing else catches. `required()` unions the keys, so a name
+    // added to one library alone becomes globally protected by `shape:icon:remove`
+    // while `shape:install --default=solid` never publishes it -- and the shipped
+    // component throws for every Heroicons consumer. Compared as sets rather than
+    // against a written-out list, so this keeps holding as the table grows.
+    $names = array_map(
+        static fn (array $library): array => array_keys($library['aliases']),
+        Libraries::KNOWN,
+    );
+
+    foreach ($names as $library => $keys) {
+        expect($keys)->toEqualCanonicalizing(Libraries::required(), "[{$library}] is missing a name");
+    }
 });
 
 it('lists a name from every library it knows', function () {

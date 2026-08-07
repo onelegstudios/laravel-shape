@@ -181,8 +181,9 @@ beside it already says the same thing. That sentence, not the mark and not the c
 carries the meaning for a reader who cannot see either.
 
 Like the button's spinner, it has to have been published. `shape:install` does it for you;
-`php artisan shape:icon:add error` is the manual form, `shape:icon:check` reports it missing,
-and `shape:icon:remove` will not take it away without `--force`.
+`php artisan shape:icon:add error` is the manual form, `shape:icon:check` reports it missing —
+and fails `--strict`, so CI can catch it — and `shape:icon:remove` will not take it away without
+`--force`.
 
 ### Icons
 
@@ -236,6 +237,190 @@ audit finding rather than a courtesy. So in the composed form that one attribute
 
 Closing that gap is the whole reason the shorthand exists. Reach for the parts when you need
 markup the props cannot describe, and for the prop the rest of the time.
+
+## Select
+
+The input's box around a native `<select>`, with a chevron drawn from the icon set you installed:
+
+```blade
+<shape:select label="Plan" name="plan">
+    <option value="free">Free</option>
+    <option value="pro">Pro</option>
+</shape:select>
+```
+
+Everything the input does, this does: the same four `size` rungs, the same padding, the same
+`invalid` reading, the same shorthand, the same class-on-the-box rule. The options are the slot.
+
+The chevron resolves through the `select-chevron` alias — `chevrons-up-down` in Lucide,
+`chevron-up-down` in Heroicons — so it has to have been published. `shape:install` does it for you;
+`php artisan shape:icon:add select-chevron` is the manual form. Point the alias somewhere else in
+[Configuration](configuration.md) if you would rather have a single downward chevron, and every
+select follows.
+
+**The whole box opens the select, chevron included.** That is worth stating because it is the one
+place this component is built differently from the input: the control and the mark share a single
+grid cell rather than sitting in a flex row, so the `<select>` fills the box and the chevron floats
+over it. A mark in a column of its own would leave the last twenty pixels of the field dead —
+which is exactly where everyone clicks.
+
+`icon` puts a leading mark in the field, sized to the rung, the way the input's does:
+
+```blade
+<shape:select icon="globe" name="region">…</shape:select>
+```
+
+There is no `icon-trailing`. The chevron owns that side, and a select carrying two trailing marks
+is not a thing to want. `icon-set` names the set for the **leading** mark only — the chevron is
+Shape's own and always resolves through `default`, the same as the button's spinner, because that
+is the only set `shape:install` publishes the semantic names into.
+
+`multiple` is a list box rather than a dropdown, so it draws no chevron, leaves no room for one, and
+keeps the browser's own rendering:
+
+```blade
+<shape:select multiple size="4" name="plans[]">…</shape:select>
+```
+
+If your application also uses `@tailwindcss/forms` in its base mode, Shape's select still renders
+exactly one chevron: the component clears the background image, colour and border that plugin paints
+onto every `<select>`.
+
+## Textarea
+
+The same box around a control that stretches instead of sitting on a line:
+
+```blade
+<shape:textarea label="Bio" description="A sentence or two." wire:model="bio" />
+```
+
+Two things differ from the input, and nothing else does. The box does not centre a line it does not
+have, and each rung takes the next step up in `leading` — 14px type on a 20px line is comfortable
+for one line of a form and tight for five lines of prose.
+
+`rows` defaults to **3** rather than the browser's 2, which is a box so short it reads as broken.
+It is an ordinary attribute, so a call site's own wins.
+
+`autosize` grows the field with what is typed into it:
+
+```blade
+<shape:textarea autosize rows="3" wire:model="bio" />
+```
+
+It is opt-in rather than the default on purpose. It lands in Chromium and not everywhere else, so a
+packaged control that reflowed under the cursor in one browser and sat still in another would behave
+differently per engine for no reason you asked for. `rows` keeps working as the minimum where it is
+supported, and as the height where it is not.
+
+## Checkbox
+
+A box Shape draws itself, with its tick and its indeterminate bar from your icon set:
+
+```blade
+<shape:checkbox label="Email me about releases" description="About once a month." name="notify" value="1" />
+```
+
+The label sits **beside** the box rather than above it — a checkbox's words name the option next to
+them, not the field over them — so this component is a row where the others are a column. A long
+label wraps under its own first line instead of under the box.
+
+`size` gives boxes of 16, 18, 20 and 24px, each paired with a mark that leaves a 2px inset and each
+sitting inside its label's own line box, so the row aligns with no margin to tune. `xs` keeps its
+smallness in the type and the gap: the box floor is 16px, because 14 with a 12 inside it is a target
+nobody can hit. Only `lg` clears
+[WCAG 2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)'s 24px on the box
+alone — what covers the rest is the label, which is part of the same target.
+
+A group is a `<shape:field>` and some boxes. There is no group component to learn:
+
+```blade
+<shape:field name="tags" label="Tags" description="Pick any that apply.">
+    <shape:checkbox value="php" label="PHP" />
+    <shape:checkbox value="laravel" label="Laravel" />
+</shape:field>
+```
+
+Each box derives its own id from its `value` — `tags-php`, `tags-laravel` — so each label clicks
+through to its own box rather than all of them to the first, and each help text answers to an id of
+its own. The **message belongs to the field**, which prints it once: a validator has one opinion per
+name however many controls carry it, and three copies of one sentence is not a message.
+
+Standing on its own, a checkbox *is* the whole field, so it prints its own message. A consent box
+that fails validation silently is the bug that covers.
+
+Indeterminate has no HTML attribute — set the property:
+
+```blade
+<shape:checkbox label="Select all" id="all" />
+<script>document.getElementById('all').indeterminate = true</script>
+```
+
+A box can be checked and indeterminate at once, and the bar wins.
+
+The two marks resolve through `checkbox-check` and `checkbox-indeterminate`, which both libraries
+happen to spell `check` and `minus`. They are separate names anyway, so repointing the mark inside a
+checkbox does not repoint every `<shape:icon name="check">` you wrote yourself.
+
+## Radio
+
+The checkbox's row and box, made round:
+
+```blade
+<shape:field name="plan" label="Plan">
+    <shape:radio value="free" label="Free" description="One project." />
+    <shape:radio value="pro" label="Pro" description="Best for a small team." />
+</shape:field>
+```
+
+Round rather than square is the only thing telling a reader this set is one-of-many rather than
+any-of-many, so the shape is not a prop. The boxes are the checkbox's exactly, because a radio and a
+checkbox in one form are the same control with two selection rules and should measure the same down
+a column.
+
+The dot is CSS rather than an icon, which means **a radio needs nothing published to render**.
+Heroicons ships no `circle` and no `dot`, so an alias would have pointed at a glyph half the
+libraries Shape can install do not have.
+
+A radio never prints a message of its own, even standing alone: one option of a set the user cannot
+choose from is a bug in the markup rather than a state to style, so the sentence always belongs to
+the group. It still takes the invalid styling — the colour is the control's, the sentence is the
+field's.
+
+## File
+
+The input's box around the one control that arrives with a button already inside it:
+
+```blade
+<shape:file label="Avatar" description="PNG or JPG, up to 2 MB." name="avatar" accept="image/*" />
+```
+
+The button gives up its own border, background and padding, so the field reads as one frame with an
+action in it rather than a control sitting inside a box. That is also what keeps the height right: a
+button with padding of its own would make this field taller than a text field of the same rung, and
+with its height reduced to its own line box the two sit level at 26, 34, 38 and 46px.
+
+The filename is `ink-muted` rather than `ink`, because it is a report of what was picked rather than
+a value anybody typed.
+
+`icon` puts a leading mark in the field. There is no trailing one: the far end of this box belongs
+to the filename, which has no fixed length and every reason to be the thing that truncates.
+
+## Date and time fields
+
+`<shape:input type="date">` is an ordinary input, with one addition. Chromium draws a calendar button
+inside the field at full contrast, in a colour Shape does not control, so it reads louder than a
+trailing mark in the field beside it. The component knocks it back to the same visual weight and
+gives it the pointer cursor a button should have:
+
+```blade
+<shape:input label="Starts" type="datetime-local" name="starts_at" />
+```
+
+It follows dark mode for free — Chromium draws that glyph from the element's `color-scheme`, which
+Shape's theme already sets — so there is no inverted filter and no `dark:` class involved. Firefox
+draws no such control and Safari exposes no such pseudo-element, so the styling is inert there
+rather than wrong. Nothing short of a JavaScript date picker makes these fields look the same across
+browsers, and Shape does not pretend otherwise.
 
 ## Icon
 
@@ -309,8 +494,9 @@ which is the promise the config file exists to make.
 `memo`, Blaze's third strategy, is unused for the same reason: it keys on the call site alone,
 so it cannot see a config change either.
 
-**The field components opt out of Blaze entirely** — the input, the field, the label, the
-description and the error all stay on Blade's own pipeline. They share a field name through
+**The field components opt out of Blaze entirely** — every control (the input, select, textarea,
+checkbox, radio and file input) along with the field, the label, the description and the error all
+stay on Blade's own pipeline. They share a field name through
 `@aware`, and Blaze compiles that directive against a data stack of its own that does not agree
 with Blade's: it walks only a component's ancestors where Blade checks the component's own data
 first, and it strips the key from the attribute bag on the way past. A field compiled by one
