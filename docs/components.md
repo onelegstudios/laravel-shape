@@ -118,8 +118,8 @@ other four:
 That renders a label, the control, the help text, and — when the validator has something to say
 about `email` — the message, with the label pointed at the control and `aria-describedby`
 pointing at the parts that exist. Everything the shorthand cannot say goes back to the parts
-themselves, which are `<shape:field>`, `<shape:label>`, `<shape:description>` and
-`<shape:error>`:
+themselves, which are `<shape:field>`, `<shape:label>`, `<shape:legend>`, `<shape:description>`
+and `<shape:error>`:
 
 ```blade
 <shape:field name="email">
@@ -238,6 +238,25 @@ audit finding rather than a courtesy. So in the composed form that one attribute
 Closing that gap is the whole reason the shorthand exists. Reach for the parts when you need
 markup the props cannot describe, and for the prop the rest of the time.
 
+`<shape:legend>` is the part for a `<fieldset>` you wrote yourself — it is styled to match a label
+and takes the same `size` rungs, and it resolves nothing, because a legend names its fieldset by
+sitting in it:
+
+```blade
+<fieldset>
+    <shape:legend>Plan</shape:legend>
+
+    <shape:field name="plan">
+        <shape:radio value="free" label="Free" />
+        <shape:error />
+    </shape:field>
+</fieldset>
+```
+
+For a Shape field, use the `legend` prop instead and let the field write both — see
+[`legend` rather than `label`](#legend-rather-than-label). Either way the fieldset's
+`aria-describedby` is yours in the composed form, for the reason above.
+
 ## Select
 
 The input's box around a native `<select>`, with a chevron drawn from the icon set you installed:
@@ -334,7 +353,7 @@ alone — what covers the rest is the label, which is part of the same target.
 A group is a `<shape:field>` and some boxes. There is no group component to learn:
 
 ```blade
-<shape:field name="tags" label="Tags" description="Pick any that apply.">
+<shape:field name="tags" legend="Tags" description="Pick any that apply.">
     <shape:checkbox value="php" label="PHP" />
     <shape:checkbox value="laravel" label="Laravel" />
 </shape:field>
@@ -344,6 +363,29 @@ Each box derives its own id from its `value` — `tags-php`, `tags-laravel` — 
 through to its own box rather than all of them to the first, and each help text answers to an id of
 its own. The **message belongs to the field**, which prints it once: a validator has one opinion per
 name however many controls carry it, and three copies of one sentence is not a message.
+
+### `legend` rather than `label`
+
+Naming `legend` is what opens a `<fieldset>` with a `<legend>` instead of a `<div>` with a `<label>`,
+and a group wants one. Boxes wired by `name` are visually a set and, without the element, unrelated
+controls to anything reading the page — a screen reader announces three checkboxes and a floating
+word. A `label` on a group is also a `for` pointing at `tags`, which is an id no box carries; the
+options are `tags-php` and `tags-laravel`. The legend has no `for` at all, because it names the
+fieldset it opens by sitting in it.
+
+The two props are one decision, so naming both draws the legend and drops the label rather than
+rendering a dangling pair.
+
+The group's **help text is named on the fieldset** via `aria-describedby`, because the field drew it
+and knows the id exists. The **message is not**, and deliberately: every box already points at
+`tags-error` itself, so a fieldset naming it too would have the sentence read on entering the group
+and again on the first box.
+
+One thing measures differently from a plain field. A rendered `<legend>` is painted into its
+fieldset's border box rather than laid out as a child, so no `gap` can reach it — the column lives on
+a wrapper inside and the legend carries its own margin. That means `class` on a group styles the
+outer box, which is what you want for `max-w-sm` or a border of your own, and what you do not want
+for `gap-4`.
 
 Standing on its own, a checkbox *is* the whole field, so it prints its own message. A consent box
 that fails validation silently is the bug that covers.
@@ -366,11 +408,15 @@ checkbox does not repoint every `<shape:icon name="check">` you wrote yourself.
 The checkbox's row and box, made round:
 
 ```blade
-<shape:field name="plan" label="Plan">
+<shape:field name="plan" legend="Plan">
     <shape:radio value="free" label="Free" description="One project." />
     <shape:radio value="pro" label="Pro" description="Best for a small team." />
 </shape:field>
 ```
+
+`legend` rather than `label` for the reason [Checkbox](#legend-rather-than-label) gives, and it
+matters more here: a radio only ever exists as one option of a set, so a radio group that is not
+announced as a group is every radio Shape draws.
 
 Round rather than square is the only thing telling a reader this set is one-of-many rather than
 any-of-many, so the shape is not a prop. The boxes are the checkbox's exactly, because a radio and a

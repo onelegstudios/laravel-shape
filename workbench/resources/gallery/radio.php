@@ -37,9 +37,14 @@ return [
             // What this control is actually for, and it needs no group component: the
             // field carries the name, each option derives its own id from its value,
             // and the field prints the one message.
+            //
+            // `legend` rather than `label` is what makes the field a <fieldset>, and a
+            // group wants one. Three radios wired by `name` are visually a set and,
+            // without it, three unrelated controls to anything reading the page --
+            // plus a name that pointed at an id no option carries.
             'title' => 'A group, in a field',
             'source' => implode("\n", [
-                '<shape:field name="plan" label="Plan" description="Change it whenever.">',
+                '<shape:field name="plan" legend="Plan" description="Change it whenever.">',
                 '    <shape:radio value="free" label="Free" description="One project, no card." />',
                 '    <shape:radio value="pro" label="Pro" description="Best for a small team." checked />',
                 '    <shape:radio value="team" label="Team" description="Seats and shared billing." />',
@@ -52,7 +57,7 @@ return [
             // rather than a state to style, so the sentence always belongs to a group.
             'title' => 'Invalid (the styling is the control\'s, the sentence is the group\'s)',
             'source' => implode("\n", [
-                '<shape:field name="plan" label="Plan">',
+                '<shape:field name="plan" legend="Plan">',
                 '    <shape:radio value="free" label="Free" :invalid="true" />',
                 '    <shape:radio value="pro" label="Pro" :invalid="true" />',
                 '    <shape:error>Choose a plan to continue.</shape:error>',

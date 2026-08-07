@@ -112,7 +112,11 @@ it('leaves the field components on blade\'s own pipeline', function (string $tag
     'the radio' => ['<shape:radio name="plan" value="pro" />'],
     'the switch' => ['<shape:switch name="notify" />'],
     'the field' => ['<shape:field name="email"><shape:input /></shape:field>'],
+    'the field as a group' => ['<shape:field name="plan" legend="Plan"><shape:radio value="free" /></shape:field>'],
     'the label' => ['<shape:label>Email</shape:label>'],
+    // The one member with no `@aware` of its own, so opting out is a choice rather
+    // than a constraint -- pinned here so it stays one somebody made on purpose.
+    'the legend' => ['<shape:legend>Plan</shape:legend>'],
     'the description' => ['<shape:description>Help</shape:description>'],
     'the error' => ['<shape:error name="email" />'],
 ]);

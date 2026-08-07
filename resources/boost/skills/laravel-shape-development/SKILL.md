@@ -111,11 +111,17 @@ is not folded into the id — a switch is never one of a group.
 Groups of checkboxes or radios go inside a field, which carries the name and prints one message:
 
 ```blade
-<shape:field name="plan" label="Plan">
+<shape:field name="plan" legend="Plan">
     <shape:radio value="free" label="Free" description="One project." />
     <shape:radio value="pro" label="Pro" />
 </shape:field>
 ```
+
+**A group takes `legend`, not `label`.** Naming `legend` renders a real `<fieldset>`/`<legend>`, which
+is what makes the set announce as a group; a `label` on a group is a `for` pointing at an id no option
+carries, because the options are `plan-free` and `plan-pro`. Naming both draws the legend only. The
+group's description is named on the fieldset; the message is not, because every option already carries
+it. `class` on a group lands on the fieldset, and the column spacing lives on a wrapper inside it.
 
 Controls find their own field name in `name`, in `wire:model` (modifiers included), or in the
 enclosing `<shape:field>`, then look themselves up in the validation error bag — so a failed request
@@ -136,6 +142,10 @@ parts cannot see which of them rendered:
     <shape:error />
 </shape:field>
 ```
+
+The parts are `<shape:field>`, `<shape:label>`, `<shape:legend>`, `<shape:description>` and
+`<shape:error>`. `<shape:legend>` is for a `<fieldset>` you wrote yourself; for a Shape field, use the
+`legend` prop.
 
 **Icon** — `name`, `set`, `size`, `color`, `label`. Names must be published first:
 
