@@ -18,6 +18,20 @@ afterEach(function () {
     File::deleteDirectory(TestCase::iconPath());
 });
 
+/**
+ * The `<fieldset>` opening tag alone, out of the group it wraps.
+ *
+ * Named apart from the radio and checkbox suites' `dial()` and `box()` because
+ * Pest puts every module-level function in one namespace, however many files
+ * they were written in.
+ */
+function fence(string $html): string
+{
+    preg_match('/<fieldset\b[^>]*>/', $html, $matches);
+
+    return $matches[0] ?? '';
+}
+
 it('stacks the parts of a field in one column', function () {
     $html = Blade::render('<shape:field><shape:input /></shape:field>');
 
@@ -145,6 +159,148 @@ describe('shorthand', function () {
     });
 });
 
+describe('a group', function () {
+    it('opens a fieldset when a legend is named', function () {
+        // The whole point: a set of radios called `plan` is a group, and nothing
+        // but the element says so.
+        $html = Blade::render(<<<'BLADE'
+            <shape:field name="plan" legend="Plan">
+                <shape:radio value="free" label="Free" />
+                <shape:radio value="pro" label="Pro" />
+            </shape:field>
+        BLADE);
+
+        expect($html)
+            ->toContain('<fieldset')
+            ->toContain('>Plan</legend>');
+    });
+
+    it('stays a plain div when only a label was named', function () {
+        // A field around one control is a label and a column, and this change is
+        // additive: naming `label` has to render exactly what it always did.
+        $html = Blade::render('<shape:field name="email" label="Email"><shape:input /></shape:field>');
+
+        expect($html)
+            ->toContain('for="email"')
+            ->toContain('flex flex-col gap-1.5')
+            ->not->toContain('<fieldset');
+    });
+
+    it('keeps the column off the fieldset, because a legend is not laid out in it', function () {
+        // A rendered <legend> is painted into the border box rather than placed as
+        // a child, so a `gap` out here would space every part except the one that
+        // needs it. The wrapper inside carries the column, and it comes after the
+        // legend.
+        $html = Blade::render('<shape:field name="plan" legend="Plan"><shape:radio value="free" /></shape:field>');
+
+        expect(fence($html))
+            ->toContain('min-w-0')
+            ->not->toContain('flex flex-col');
+
+        expect(strpos($html, '</legend>'))->toBeLessThan(strpos($html, 'flex flex-col gap-1.5'));
+    });
+
+    it('lets a group shrink inside a flex row', function () {
+        // `fieldset` ships a UA `min-inline-size: min-content` that Preflight does
+        // not reset, which is the one way it behaves unlike the <div> it replaces.
+        expect(fence(Blade::render('<shape:field name="plan" legend="Plan" />')))
+            ->toContain('min-w-0');
+    });
+
+    it('draws the legend rather than a label when both were named', function () {
+        // A <label for="plan"> inside a fieldset points at an id no element renders
+        // -- the options are `plan-free` and `plan-pro` -- which is the finding this
+        // mode exists to remove. Precedence rather than an exception: nothing in
+        // this directory throws.
+        $html = Blade::render(<<<'BLADE'
+            <shape:field name="plan" legend="Plan" label="Plan">
+                <shape:radio value="free" label="Free" />
+            </shape:field>
+        BLADE);
+
+        expect($html)
+            ->toContain('>Plan</legend>')
+            ->not->toContain('for="plan"');
+    });
+
+    it('names the group description on the fieldset itself', function () {
+        // The field drew the sentence, so it knows the id exists. No option claims
+        // this one: a radio's own description is scoped by value.
+        $html = Blade::render('<shape:field name="plan" legend="Plan" description="Change it whenever." />');
+
+        expect(fence($html))->toContain('aria-describedby="plan-description"');
+        expect($html)->toContain('id="plan-description"');
+    });
+
+    it('names the trailing description after the leading one', function () {
+        $html = Blade::render('<shape:field name="plan" legend="Plan" description="One" description-trailing="Two" />');
+
+        expect(fence($html))
+            ->toContain('aria-describedby="plan-description plan-description-trailing"');
+    });
+
+    it('names no description it did not draw', function () {
+        // A composed group writes its own `aria-describedby`, exactly as a composed
+        // field does: an anonymous component cannot see which of its children drew
+        // something, and naming an id that was never rendered is the finding.
+        $html = Blade::render(<<<'BLADE'
+            <shape:field name="plan" legend="Plan">
+                <shape:description>Change it whenever.</shape:description>
+            </shape:field>
+        BLADE);
+
+        expect(fence($html))->not->toContain('aria-describedby');
+    });
+
+    it('leaves the message off the fieldset, because every option already carries it', function () {
+        // Named here too, the sentence would be read on entering the group and
+        // again on the first option.
+        seedErrors(['plan' => ['Pick a plan.']]);
+
+        $html = Blade::render(<<<'BLADE'
+            <shape:field name="plan" legend="Plan">
+                <shape:radio value="free" label="Free" />
+                <shape:radio value="pro" label="Pro" />
+            </shape:field>
+        BLADE);
+
+        expect(fence($html))->not->toContain('plan-error');
+
+        // Two options describing it, and the message's own id. A fourth would be
+        // the fieldset.
+        expect(substr_count($html, 'plan-error'))->toBe(3);
+    });
+
+    it('prints the group message once', function () {
+        seedErrors(['plan' => ['Pick a plan.']]);
+
+        $html = Blade::render(<<<'BLADE'
+            <shape:field name="plan" legend="Plan">
+                <shape:radio value="free" label="Free" />
+                <shape:radio value="pro" label="Pro" />
+            </shape:field>
+        BLADE);
+
+        expect(substr_count($html, 'Pick a plan.'))->toBe(1);
+    });
+
+    it('takes an aria-describedby from the call site over the one it derives', function () {
+        $html = Blade::render('<shape:field name="plan" legend="Plan" description="Help" aria-describedby="mine" />');
+
+        expect(fence($html))
+            ->toContain('aria-describedby="mine"')
+            ->not->toContain('plan-description');
+    });
+
+    it('puts the call site\'s classes on the box rather than on the column', function () {
+        // `max-w-sm` and a border of your own are things said about the element you
+        // can see. The cost is that `gap-4` retunes a plain field and not a group.
+        expect(fence(Blade::render('<shape:field name="plan" legend="Plan" class="max-w-sm" />')))
+            ->toContain('min-w-0')
+            ->toContain('max-w-sm');
+    });
+});
+
 describe('label', function () {
     it('carries the pair on weight rather than size', function () {
         expect(Blade::render('<shape:label>Email</shape:label>'))
@@ -190,6 +346,63 @@ describe('label', function () {
     it('does not leak the rung onto the element', function () {
         expect(Blade::render('<shape:label size="lg">Email</shape:label>'))
             ->not->toContain('size=');
+    });
+});
+
+describe('legend', function () {
+    it('carries the group name at the label\'s weight and size', function () {
+        // A group's name and a field's name are the same line of type in two
+        // elements, and they should measure the same down a column.
+        expect(Blade::render('<shape:legend>Plan</shape:legend>'))
+            ->toContain('text-sm font-medium text-ink');
+    });
+
+    it('owns its own bottom margin, because no gap can reach it', function () {
+        // The one place this family puts spacing on a part rather than on the
+        // parent. A rendered <legend> is out of its fieldset's formatting context,
+        // so a `gap` on any ancestor misses it.
+        expect(Blade::render('<shape:legend>Plan</shape:legend>'))->toContain('mb-1.5');
+    });
+
+    it('points at nothing, because it has nothing to point at', function () {
+        // A legend names the fieldset it opens by sitting in it. There is no `for`
+        // to resolve and no name to inherit, which is why this is its own component
+        // rather than the label wearing a different tag.
+        expect(Blade::render('<shape:field name="plan"><shape:legend>Plan</shape:legend></shape:field>'))
+            ->not->toContain('for=');
+    });
+
+    it('follows a rung when one is named', function (string $size, string $type) {
+        // A `size="lg"` group's options render `text-base`, and a `text-sm` name
+        // above them is visibly the wrong size.
+        expect(Blade::render('<shape:legend size="'.$size.'">Plan</shape:legend>'))
+            ->toContain($type.' font-medium');
+    })->with([
+        'xs' => ['xs', 'text-xs'],
+        'sm' => ['sm', 'text-sm'],
+        'md' => ['md', 'text-sm'],
+        'lg' => ['lg', 'text-base'],
+    ]);
+
+    it('stays at the field size when no rung was named', function () {
+        expect(Blade::render('<shape:legend>Plan</shape:legend>'))
+            ->toContain('text-sm font-medium');
+    });
+
+    it('falls back to the field size for a rung it does not have', function () {
+        expect(Blade::render('<shape:legend size="huge">Plan</shape:legend>'))
+            ->toBe(Blade::render('<shape:legend>Plan</shape:legend>'));
+    });
+
+    it('does not leak the rung onto the element', function () {
+        expect(Blade::render('<shape:legend size="lg">Plan</shape:legend>'))
+            ->not->toContain('size=');
+    });
+
+    it('takes classes from the call site without losing its own', function () {
+        expect(Blade::render('<shape:legend class="uppercase">Plan</shape:legend>'))
+            ->toContain('uppercase')
+            ->toContain('font-medium');
     });
 });
 

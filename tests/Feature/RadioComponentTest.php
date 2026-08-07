@@ -169,7 +169,7 @@ describe('a group', function () {
 
     it('gives every option an id of its own', function () {
         $html = Blade::render(<<<'BLADE'
-            <shape:field name="plan" label="Plan">
+            <shape:field name="plan" legend="Plan">
                 <shape:radio value="free" label="Free" />
                 <shape:radio value="pro" label="Pro" />
             </shape:field>
@@ -209,7 +209,7 @@ describe('a group', function () {
         seedErrors(['plan' => ['Pick a plan.']]);
 
         $html = Blade::render(<<<'BLADE'
-            <shape:field name="plan" label="Plan">
+            <shape:field name="plan" legend="Plan">
                 <shape:radio value="free" label="Free" />
                 <shape:radio value="pro" label="Pro" />
             </shape:field>
@@ -222,14 +222,40 @@ describe('a group', function () {
         seedErrors(['plan' => ['Pick a plan.']]);
 
         $html = Blade::render(<<<'BLADE'
-            <shape:field name="plan" label="Plan">
+            <shape:field name="plan" legend="Plan">
                 <shape:radio value="free" label="Free" />
                 <shape:radio value="pro" label="Pro" />
             </shape:field>
         BLADE);
 
+        // Two options describing it, and the message's own id. The count is also
+        // the guard on the other side of that: the fieldset around them
+        // deliberately does not name `plan-error` too, because a sentence read on
+        // entering the group and again on the first option is the same sentence
+        // twice. A fourth here would be that regression.
         expect(substr_count($html, 'plan-error'))->toBe(3)
             ->and($html)->toContain('id="plan-error"');
+    });
+
+    it('is announced as a group rather than as loose options', function () {
+        // Three radios wired by `name` are visually a set and, without this, three
+        // unrelated controls to anything reading the page. The element is the only
+        // thing that says otherwise.
+        //
+        // `for="plan"` is the bug this replaced, stated as an assertion: the group's
+        // name used to be a <label> pointing at an id nothing renders. Safe to match
+        // on, because `for="plan-free"` does not contain the closing quote.
+        $html = Blade::render(<<<'BLADE'
+            <shape:field name="plan" legend="Plan">
+                <shape:radio value="free" label="Free" />
+                <shape:radio value="pro" label="Pro" />
+            </shape:field>
+        BLADE);
+
+        expect($html)
+            ->toContain('<fieldset')
+            ->toContain('>Plan</legend>')
+            ->not->toContain('for="plan"');
     });
 
     it('marks every option the validator minds', function () {

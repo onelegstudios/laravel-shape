@@ -141,8 +141,19 @@ A form field is one tag or five, whichever the screen needs:
 
 That writes the label, the control, the help text and the validation message, wires the label
 to the control, and reads its invalid state out of the error bag by itself. When the shorthand
-can't say it, the parts are there — `<shape:field>`, `<shape:label>`, `<shape:description>` and
-`<shape:error>` — and naming the field once is what keeps them in agreement.
+can't say it, the parts are there — `<shape:field>`, `<shape:label>`, `<shape:legend>`,
+`<shape:description>` and `<shape:error>` — and naming the field once is what keeps them in
+agreement.
+
+A group of checkboxes or radios is a field that takes `legend` instead of `label`, which renders
+a real `<fieldset>` so the set is announced as one:
+
+```blade
+<shape:field name="plan" legend="Plan">
+    <shape:radio value="free" label="Free" />
+    <shape:radio value="pro" label="Pro" />
+</shape:field>
+```
 
 ## Documentation
 

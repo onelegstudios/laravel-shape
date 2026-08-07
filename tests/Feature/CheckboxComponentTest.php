@@ -174,7 +174,7 @@ describe('a group', function () {
 
     it('gives every option an id of its own', function () {
         $html = Blade::render(<<<'BLADE'
-            <shape:field name="tags" label="Tags">
+            <shape:field name="tags" legend="Tags">
                 <shape:checkbox value="php" label="PHP" />
                 <shape:checkbox value="laravel" label="Laravel" />
             </shape:field>
@@ -214,13 +214,31 @@ describe('a group', function () {
         seedErrors(['tags' => ['Pick at least one.']]);
 
         $html = Blade::render(<<<'BLADE'
-            <shape:field name="tags" label="Tags">
+            <shape:field name="tags" legend="Tags">
                 <shape:checkbox value="php" label="PHP" />
                 <shape:checkbox value="laravel" label="Laravel" />
             </shape:field>
         BLADE);
 
         expect(substr_count($html, 'Pick at least one.'))->toBe(1);
+    });
+
+    it('is announced as a group rather than as loose boxes', function () {
+        // The radio suite says the same thing for the same reason: without the
+        // element, a set wired by `name` reads as unrelated controls plus a
+        // floating label -- and that label used to be a `for="tags"` pointing at an
+        // id no box carries.
+        $html = Blade::render(<<<'BLADE'
+            <shape:field name="tags" legend="Tags">
+                <shape:checkbox value="php" label="PHP" />
+                <shape:checkbox value="laravel" label="Laravel" />
+            </shape:field>
+        BLADE);
+
+        expect($html)
+            ->toContain('<fieldset')
+            ->toContain('>Tags</legend>')
+            ->not->toContain('for="tags"');
     });
 
     it('discriminates by value even for a name that looks like one field', function () {

@@ -49,9 +49,13 @@ return [
             // Three boxes bound to one field. Each derives its own id from its value,
             // so each label clicks through to its own box rather than all three to
             // the first -- and the field prints one message rather than three.
+            //
+            // `legend` rather than `label` is what makes the field a <fieldset>, which
+            // is what makes the set announce as a group. The group's help text is named
+            // on the fieldset; the message is not, because every box already carries it.
             'title' => 'A group, in a field',
             'source' => implode("\n", [
-                '<shape:field name="tags" label="Tags" description="Pick any that apply.">',
+                '<shape:field name="tags" legend="Tags" description="Pick any that apply.">',
                 '    <shape:checkbox value="php" label="PHP" description="The language." />',
                 '    <shape:checkbox value="laravel" label="Laravel" />',
                 '    <shape:checkbox value="livewire" label="Livewire" />',
@@ -64,7 +68,7 @@ return [
             'title' => 'Invalid (said outright here; ordinarily the validator)',
             'source' => implode("\n", [
                 '<shape:checkbox label="I accept the terms" name="terms" value="1" :invalid="true" />',
-                '<shape:field name="tags" label="Tags">',
+                '<shape:field name="tags" legend="Tags">',
                 '    <shape:checkbox value="php" label="PHP" :invalid="true" />',
                 '    <shape:error>Pick at least one tag.</shape:error>',
                 '</shape:field>',
