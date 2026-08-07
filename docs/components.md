@@ -200,6 +200,81 @@ both at once.
 
 Both marks stay hidden from assistive tech: they decorate a control its label already named.
 
+### Prefix and suffix
+
+`prefix` puts words at the start of the field and `suffix` puts them at the end, muted and on the
+field's own type scale, sharing the box with the control rather than sitting beside it:
+
+```blade
+<shape:input prefix="$" suffix="USD" type="number" />
+
+<shape:input prefix="https://" suffix=".com" placeholder="your-site" />
+```
+
+For markup a string cannot carry — a button, a mark of your own, anything with tags in it — nest
+`<shape:input.prefix>` or `<shape:input.suffix>` instead. They are the same two components the props
+render, so there is one recipe rather than two, and they take their rung and their treatment from the
+field they are standing in:
+
+```blade
+<shape:input value="{{ $key }}" readonly>
+    <shape:input.suffix>
+        <shape:button variant="ghost" size="xs">Copy</shape:button>
+    </shape:input.suffix>
+</shape:input>
+```
+
+Write a prop *and* nest a component and you get **two** affixes on that side, not the nearer one
+winning. An anonymous component cannot see which of its children drew something — the same limit as
+[One gap, in the composed form](#one-gap-in-the-composed-form) — so the input has no way to stand its
+own down. In `segmented` the two plates overlap visibly.
+
+An affix is not a chrome prop, so a field with a prefix and no label stays a bare input rather than
+expanding — and `type="hidden"` drops both, the way it drops everything else.
+
+`affix="segmented"` puts the affix on a plate of its own instead: a fill, a divider in the field's
+own border colour, and edges flush with the frame at every rung. It is the same three props, said
+a louder way, and it is configurable in [Configuration](configuration.md) so an application can
+put every currency field on a plate at once:
+
+```blade
+<shape:input prefix="$" suffix="USD" affix="segmented" type="number" />
+```
+
+The plate is padded and sized for text. Put a control in the `inline` treatment instead, where it
+sits in the field's flow with `variant="ghost"` — the same position `<shape:file>` takes, that a
+control inside the field gives up its chrome rather than becoming a second framed control. Two
+things follow from a focusable affix that are worth knowing before you reach for one: the box
+brightens its focus ring when anything inside it takes focus, and a `disabled` control anywhere in
+the box greys the whole field.
+
+Every affix orders itself out to its own edge, so a nested one sits outside a leading or trailing
+mark rather than beside the value, and it renders where it does regardless of where you wrote it.
+A nested **suffix** is placed so it takes focus straight after the value; a nested prefix reads
+first but tabs after, so write the field out with `<shape:field>` by hand if you need a focusable
+control at the leading edge.
+
+The divider takes the field's border colour by inheriting it, which means a border of your own on
+the box reaches the plate too. It also means *parent*, not "the field": wrap an affix in a `<div>`
+of your own and it inherits that div's border colour instead.
+
+A disabled segmented field reads as one flat material — the box's disabled surface is the plate's
+own fill, so only the divider survives. That is the honest rendering of a field that cannot be
+typed into, and there is no token between the two surfaces worth inventing for it.
+
+`<shape:input.prefix>` and `<shape:input.suffix>` render outside a field too, as a plain muted word.
+`inline` is the floor there, which is what keeps that harmless — a segmented plate's bleed is not
+inert outside the box it was measured against.
+
+**An affix is decorative to assistive tech.** A screen reader announces a control's name and its
+value; it does not read the text sitting beside it inside the wrapper. So a `$` or a `kg` is not
+announced whether it is hidden or not, and hiding it would buy nothing. Where the unit carries
+meaning the label does not, say it in the label or the description:
+
+```blade
+<shape:input label="Weight" description="In kilograms." suffix="kg" type="number" name="weight" />
+```
+
 ### Attributes
 
 `class` goes on the box; everything else goes on the control. That is the one rule this

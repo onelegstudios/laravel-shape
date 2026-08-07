@@ -138,6 +138,30 @@ lands on the wrapper and every other attribute lands on the control. Use `max-w-
 `<shape:input type="hidden">` is the exception: it renders the bare `<input>` with no box, no derived
 id and no chrome, so a hidden field opens no gap in the form.
 
+**Only `input` takes `prefix` and `suffix`** — words at the ends of the field, muted and inside the
+box. Use the string attribute for words, or nest `<shape:input.prefix>` / `<shape:input.suffix>` for
+markup a string cannot carry; both render the same component, and a nested one takes its rung and
+treatment from the field it stands in. `affix="segmented"` puts the affix on a plate with a divider
+instead of in the flow; the default is `inline` and is configurable at `shape.components.input.affix`:
+
+```blade
+<shape:input prefix="$" suffix="USD" type="number" wire:model="amount" />
+
+<shape:input prefix="$" suffix="USD" affix="segmented" type="number" wire:model="amount" />
+
+<shape:input value="{{ $key }}" readonly>
+    <shape:input.suffix><shape:button variant="ghost" size="xs">Copy</shape:button></shape:input.suffix>
+</shape:input>
+```
+
+Do not write a prop and nest a component on the same side — you get two affixes, because the input
+cannot see what its children rendered. An affix is not a chrome prop, so it does not expand a bare
+input into a field, and `type="hidden"` drops it. Put a control in the `inline` treatment, not on the
+plate — the plate is padded for text, and anything focusable in the box rings the field's own focus
+outline while anything `disabled` in it greys the whole field. An affix is decorative to assistive
+tech: a screen reader reads the control's name and value, not the text beside it, so put a unit that
+carries meaning in the `label` or `description` as well.
+
 `range` and `color` have no wrapper — the control is the box, so `class` lands on it directly. Both
 take the input's four heights, so a slider or a swatch stands level with the field beside it. A
 `color` is square and shows no hex; bind a `<shape:input>` to the same model to show the value. A
@@ -172,7 +196,8 @@ php artisan vendor:publish --tag="shape-config"
 ```
 
 `config/shape.php` has `components.{button,input,select,textarea,checkbox,radio,switch,file,range,color}`
-(a `size` each, plus `variant` and `color` on the button) and `icons.{path,set,sets,aliases}`. Config is merged
+(a `size` each, plus `variant` and `color` on the button and `affix` on the input) and
+`icons.{path,set,sets,aliases}`. Config is merged
 one level deep, so a published file replaces each block wholesale — do not delete keys from it.
 
 Rebrand through the theme rather than the config or the views:

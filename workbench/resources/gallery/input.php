@@ -46,6 +46,53 @@ return [
             ]),
         ],
         [
+            // An affix is not sized here either, for the icon row's reason. It is
+            // muted because it is not the value, and it sits in the field's own flow
+            // -- an ordinary flex sibling in the box, which is the shape the wrapper
+            // was cut for.
+            'title' => 'Words at the ends (prefix, suffix)',
+            'source' => implode("\n", [
+                '<shape:input prefix="$" suffix="USD" type="number" value="1250" class="max-w-3xs" />',
+                '<shape:input size="sm" prefix="https://" suffix=".com" placeholder="your-site" class="max-w-3xs" />',
+                '<shape:input label="Weight" suffix="kg" description="Announced from the label, not the affix." type="number" name="weight" class="max-w-3xs" />',
+            ]),
+        ],
+        [
+            // The same three props, on a plate. Every number in the bleed is the
+            // rung's own, so the plate lands on the frame's border at any size and
+            // the value keeps the distance from the divider that it keeps from the
+            // border in a plain field.
+            'title' => 'The same, on a plate (affix="segmented")',
+            'source' => implode("\n", [
+                '<shape:input size="xs" prefix="$" suffix="USD" affix="segmented" value="1250" class="max-w-3xs" />',
+                '<shape:input size="md" prefix="$" suffix="USD" affix="segmented" value="1250" class="max-w-3xs" />',
+                '<shape:input size="lg" prefix="https://" affix="segmented" placeholder="your-site" class="max-w-3xs" />',
+                '<shape:input prefix="$" affix="segmented" value="not-a-number" :invalid="true" class="max-w-3xs" />',
+            ]),
+        ],
+        [
+            // The escape hatch is a component rather than a named slot, which is what
+            // the props render anyway -- so there is one recipe, and a nested affix
+            // takes its rung and its treatment from the field it stands in without
+            // the call site repeating either.
+            //
+            // Inline rather than segmented, deliberately. The plate is padded and
+            // sized for text; a control in the field gives up its chrome instead of
+            // becoming a second framed control, which is why the button here is a
+            // ghost.
+            'title' => 'Markup a string cannot carry (the nested parts)',
+            'source' => implode("\n", [
+                '<shape:input value="sk_live_8f2c1" readonly class="max-w-3xs">',
+                '    <shape:input.suffix>',
+                '        <shape:button variant="ghost" size="xs">Copy</shape:button>',
+                '    </shape:input.suffix>',
+                '</shape:input>',
+                '<shape:input size="sm" placeholder="Search orders" class="max-w-3xs">',
+                '    <shape:input.prefix><shape:icon name="search" size="sm" class="text-ink-muted" /></shape:input.prefix>',
+                '</shape:input>',
+            ]),
+        ],
+        [
             // What a form is actually made of. The label, the help text and the
             // message are three components; naming them as props is the shorthand
             // that assembles all three, wires the label to the control, and points
@@ -123,6 +170,7 @@ return [
             'source' => implode("\n", [
                 '<shape:input label="Email" description="We never share it." name="email" class="max-w-3xs" />',
                 '<shape:input icon="search" placeholder="Search" class="max-w-3xs" />',
+                '<shape:input prefix="$" suffix="USD" affix="segmented" value="1250" class="max-w-3xs" />',
                 '<shape:input name="email" value="not-an-address" :invalid="true" class="max-w-3xs" />',
                 '<shape:input value="Cannot be edited" disabled class="max-w-3xs" />',
             ]),

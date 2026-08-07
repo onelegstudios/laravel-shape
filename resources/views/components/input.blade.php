@@ -11,8 +11,22 @@
     'icon' => null,
     'iconTrailing' => null,
     'iconSet' => 'default',
+    'prefix' => null,
+    'suffix' => null,
+    'affix' => null,
     'invalid' => null,
 ])
+
+{{-- `prefix` and `suffix` take words. Anything a string cannot carry goes in the
+     slot instead, as `<shape:input.prefix>` or `<shape:input.suffix>` -- the same
+     two components this file renders for these props, so there is one recipe rather
+     than a prop path and a slot path to keep in step. Their own files carry the
+     reasoning.
+
+     Nothing here can tell whether the slot drew one. An anonymous component cannot
+     see what its children rendered, which is the limitation the composed field's
+     `aria-describedby` already runs into -- so a call site that writes both a prop
+     and a nested component gets two affixes rather than the nearer one winning. --}}
 
 {{-- After `@props`, and it is the only order that works. `@props` ends by
      unsetting every variable whose name matches an attribute it did not claim as a
@@ -36,6 +50,21 @@
     $defaults = array_filter((array) config('shape.components.input'), 'is_string');
 
     $size ??= $defaults['size'] ?? 'md';
+
+    // The second axis, and the only other thing this component takes from config.
+    // `inline` sets an affix in the field's own flow; `segmented` gives it a plate of
+    // its own against the frame's border.
+    //
+    // Declared `null` in `@props` rather than `'inline'`, for the reason `$size` is:
+    // a prop that already holds a string never reaches this line, so a configured
+    // default would be read once at the top of the file and never again.
+    //
+    // Floored to a closed set right after. `affix` is the one prop here whose name
+    // reads like it takes the affix itself -- `affix="$"` is a plausible slip -- and
+    // landing quietly on `inline` is a better answer than an unstyled plate.
+    $affix ??= $defaults['affix'] ?? 'inline';
+
+    $affix = $affix === 'segmented' ? 'segmented' : 'inline';
 
     // The caller's own type, read off the bag before the `text` default is merged
     // below -- the only place their answer is visible. Every branch in this file
@@ -124,8 +153,11 @@
             :icon="$icon"
             :icon-trailing="$iconTrailing"
             :icon-set="$iconSet"
+            :prefix="$prefix"
+            :suffix="$suffix"
+            :affix="$affix"
             :invalid="$bad"
-        />
+        >{{ $slot }}</x-shape::input>
     </x-shape::field>
 @else
     @php
@@ -170,6 +202,11 @@
         // four extra words: these class names appear literally in this file, so
         // Tailwind's scanner finds them through `@source "../views"` and the
         // safelist in shape.css has nothing to say about them.
+        //
+        // One string rather than a border half and a ring half, which an earlier
+        // draft split so a segmented affix could take the colour without the ring.
+        // It does not need to: the plate inherits this computed border colour, so it
+        // follows the pair below in both states without either file naming the other.
         $box = $bad
             ? 'border-danger-border focus-within:outline-danger-ring'
             : 'border-neutral-border focus-within:outline-neutral-ring';
@@ -224,6 +261,14 @@
         $trail = is_string($iconTrailing) && $iconTrailing !== '' ? $iconTrailing : null;
         $set = is_string($iconSet) && $iconSet !== '' ? $iconSet : 'default';
 
+        // Guarded exactly the way the two marks above are, and for the reason they
+        // are: a bare `<shape:input prefix />` arrives as `true`, and `(string) true`
+        // is `"1"` -- a field with a 1 stamped on the front of it rather than a field
+        // with no prefix. `trim(...) !== ''` rather than `empty()`, because
+        // `prefix="0"` is a prefix.
+        $pre = is_string($prefix) && trim($prefix) !== '' ? $prefix : null;
+        $post = is_string($suffix) && trim($suffix) !== '' ? $suffix : null;
+
         // The class goes on the box and everything else on the control, which is
         // the one rule this shape costs. It is the right way round: `max-w-sm`,
         // `rounded-none` and a border colour of your own are all things you are
@@ -249,7 +294,45 @@
             <x-shape::icon :name="$lead" :set="$set" :size="$rung" class="text-ink-muted" />
         @endif
 
+        {{-- The prop is a call into the same component the slot takes, so there is
+             one copy of the affix recipe rather than two to keep in step -- the
+             bargain the shorthand above strikes with the bare branch, struck again.
+
+             Both values are passed resolved. `@aware` would find a rung of its own,
+             but it reads whatever is nearest on the render stack rather than
+             specifically this input's, so a wrapper component of the call site's
+             carrying its own `size` would size the affix and not the field. Handing
+             over the answer already floored settles it.
+
+             `{{ }}` escapes, because these came off attributes.
+
+             Nothing is hidden from assistive tech and nothing is pointed at either.
+             A screen reader announces a control's name and its value and does not
+             read the text beside it, so a `$` is not announced whichever way this
+             went -- which is why the docs say to put a unit that carries meaning
+             into the label rather than only into the affix. --}}
+        @if ($pre !== null)
+            <x-shape::input.prefix :size="$rung" :affix="$affix">{{ $pre }}</x-shape::input.prefix>
+        @endif
+
         <input {{ $control }} />
+
+        @if ($post !== null)
+            <x-shape::input.suffix :size="$rung" :affix="$affix">{{ $post }}</x-shape::input.suffix>
+        @endif
+
+        {{-- After the control rather than before it, and the position is a trade
+             rather than a default. Both affix components order themselves out to
+             their own edge, so wherever the slot sits, one of the two ends up drawn
+             somewhere other than where it stands in the markup -- and the DOM is
+             what decides the tab order.
+
+             This way round puts a nested suffix immediately after the value, which
+             is the case that has anything focusable in it: the button at the end of
+             a field is a Copy or a Search, and a prefix is a `$`. A call site that
+             genuinely needs to tab into a leading control should write the field out
+             by hand rather than have this component guess. --}}
+        {{ $slot }}
 
         @if ($trail !== null)
             <x-shape::icon :name="$trail" :set="$set" :size="$rung" class="text-ink-muted" />
