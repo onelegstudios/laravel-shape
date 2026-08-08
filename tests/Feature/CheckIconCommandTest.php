@@ -328,7 +328,7 @@ it('succeeds on drift without --strict', function () {
     checkIcons()->assertSuccessful();
 });
 
-it('says so when a file predates the stamp', function () {
+it('says so when a file carries no stamp', function () {
     stageIcon(['name' => ['check']])->assertSuccessful();
 
     unstamp($this->iconPath.'/lucide/check.blade.php');

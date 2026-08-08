@@ -513,8 +513,8 @@ describe('prefix and suffix', function () {
 
     it('takes markup a string cannot carry from the nested component', function () {
         // The escape hatch. `<shape:input.prefix>` is a component like every other
-        // part of a field, rather than the named slot this used to be -- which was
-        // the one place in the package that syntax appeared.
+        // part of a field, rather than a named slot -- which would be the one place
+        // in the package that syntax appeared.
         expect(Blade::render('<shape:input><shape:input.prefix><b>x</b></shape:input.prefix></shape:input>'))
             ->toContain('<b>x</b>');
     });

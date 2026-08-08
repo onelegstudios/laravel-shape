@@ -26,7 +26,7 @@ Publishing writes each icon into your application as a small Blade component hol
 Nothing is looked up at render time — no set lookup, no alias table, no file read — which is
 what lets [Blaze](https://github.com/livewire/blaze) fold an icon away entirely, leaving the
 `<svg>` inline in the compiled view. On a page dense with icons that is the single largest
-saving available, and it is why the indirection moved to publish time instead of being dropped.
+saving available, and it is why the indirection sits at publish time rather than on the render path.
 
 [Blade Icons](https://github.com/blade-ui-kit/blade-icons) still does the reading, and its
 ecosystem of sets is still what you install — but only `shape:icon:add` and `shape:icon:update`
@@ -113,7 +113,7 @@ one answer instead of the session.
 
 This is the only mode that needs a terminal. `--no-interaction`, a redirected stdin, or a name
 on the command line all take the non-interactive path, so a scripted `shape:icon:add` with
-nothing to add still fails the way it always did rather than quietly adding nothing.
+nothing to add fails rather than quietly adding nothing.
 
 ## Removing Icons
 
@@ -169,10 +169,10 @@ they are:
 
 | Name | Rendered by |
 |---|---|
-| `spinner` | the button's [loading state](components.md#button) |
-| `error` | the [validation message](components.md#input) |
-| `select-chevron` | the [select](components.md#select) |
-| `checkbox-check` | a checked [checkbox](components.md#checkbox) |
+| `spinner` | the button's [loading state](components/button.md#loading) |
+| `error` | the [validation message](components/input.md#invalid) |
+| `select-chevron` | the [select](components/select.md) |
+| `checkbox-check` | a checked [checkbox](components/checkbox.md#indeterminate) |
 | `checkbox-indeterminate` | an indeterminate one |
 
 Removing one does not leave you short of an icon you chose — it leaves a button
@@ -243,10 +243,9 @@ rewrites is still the one named `close.blade.php`: aliases decide what goes *ins
 file is addressed.
 
 **An icon that is already current is reported `unchanged` and not touched**, so mtimes stay
-honest and the compiled-view clear only happens when something actually moved. One exception you
-will meet once: icons published before this release carry an older header comment — they predate
-the [stamp](#checking-icons) — so the first update rewrites them all even where the artwork is
-identical.
+honest and the compiled-view clear only happens when something actually moved. One exception: a
+file whose header is missing its [stamp](#checking-icons) differs from a fresh render whatever the
+artwork below it says, so updating rewrites it.
 
 **An icon the set no longer has is reported and skipped**, not fatal — a glyph renamed upstream
 should not abort a two-hundred-icon refresh. The message names the *resolved* name, which is the
@@ -280,9 +279,9 @@ php artisan shape:icon:check --strict            # ...and fail the build if anyt
 | `--set=` | Limit the report to one published set. Defaults to every set on disk. |
 | `--strict` | Exit non-zero when anything is not up to date, for a CI gate. |
 
-**It changes nothing.** That is the point of it: until this verb existed, the way to find out
-whether your icons were current was to run [`shape:icon:update`](#updating-icons) and read what it
-rewrote — an answer that costs you the hand edits it is reporting on.
+**It changes nothing.** That is the point of it: the other way to find out whether your icons are
+current is to run [`shape:icon:update`](#updating-icons) and read what it rewrote — an answer that
+costs you the hand edits it is reporting on.
 
 ```
 php artisan shape:icon:check
@@ -341,10 +340,10 @@ Updating still does not read the stamp, and should not — it resolves through c
 bytes, which is what makes it the verb that brings a directory in line with configuration. The
 stamp is there so that a command forbidden from fixing anything can explain what it found.
 
-**Icons published before the stamp existed are reported `(unstamped)`.** Their header is in the
-older format, so it cannot be compared, but the artwork below it still can: you get the right
-answer about whether they are out of date, and no answer about whether anyone edited them. One
-`shape:icon:update` gives them a stamp and the distinction comes back.
+**A file whose header carries no stamp is reported `(unstamped)`.** There is nothing to compare it
+against, so an edit cannot be told from an upgrade — but the artwork below the header still can be:
+you get the right answer about whether it is out of date, and no answer about whether anyone edited
+it. One `shape:icon:update` gives it a stamp and the distinction comes back.
 
 **It checks every set, and never asks anything.** Its three siblings act, so narrowing them to one
 set is a safety property; this one only looks, and a status report covering one of three published
@@ -435,7 +434,7 @@ publishes are the ones Shape's own components render, and those components ask f
 `set` prop — so the same artwork in a second set would be a directory nothing renders from until
 you write a call site for it. When you do, `shape:icon:add --set=` is how you say so.
 
-Any other Blade Icons set works exactly as it always did — Shape maps onto sets, it does not
+Any other Blade Icons set works exactly as it does anywhere else — Shape maps onto sets, it does not
 supply them. Install the package, name the set in `icons.sets`, and add the names your components
 use to `icons.aliases`.
 
@@ -516,9 +515,9 @@ php artisan vendor:publish --tag=blade-icons
 ## Semantic Names
 
 Shape's own components can't name `loader-circle` or `arrow-path` directly — the package has no idea
-which library you installed. The button's [loading state](components.md#button) asks for
-`spinner`, the [validation message](components.md#input) asks for `error`, and the
-[select](components.md#select) asks for `select-chevron`; the set each is
+which library you installed. The button's [loading state](components/button.md#loading) asks for
+`spinner`, the [validation message](components/input.md#invalid) asks for `error`, and the
+[select](components/select.md) asks for `select-chevron`; the set each is
 published from decides what those mean:
 
 ```blade
@@ -532,14 +531,14 @@ published from decides what those mean:
 <shape:icon name="select-chevron" set="solid" /> {{-- heroicon-s-chevron-up-down --}}
 ```
 
-Two of the five translate nothing: the [checkbox](components.md#checkbox)'s `checkbox-check` and
+Two of the five translate nothing: the [checkbox](components/checkbox.md)'s `checkbox-check` and
 `checkbox-indeterminate` are `check` and `minus` in both libraries. They are names anyway, and for
 two reasons. Being in the table is what makes the package publish and protect them — that is how
 `shape:install` knows a checkbox needs artwork. And naming them for the component rather than the
 glyph is what lets you repoint the mark inside a checkbox without repointing every
 `<shape:icon name="check" />` you wrote yourself.
 
-The [radio](components.md#radio)'s dot is not in the table and never will be: Heroicons ships no
+The [radio](components/radio.md)'s dot is not in the table and never will be: Heroicons ships no
 filled circle to point at, so it is drawn in CSS instead.
 
 Nothing in your config says either of those. Shape ships the names for the libraries it can
@@ -582,7 +581,7 @@ this doesn't become a second vocabulary to learn.
 a `sm` icon in a `sm` button is the obvious thing to write rather than a lookup. Better still,
 don't write it: the button's `icon` and `icon-trailing` props take a name and size the mark to
 the button's own rung, which is one fewer thing to keep in step. See
-[Components](components.md#button).
+[Button](components/button.md#icons).
 
 The default is a literal in the component rather than a config value, for the same reason the
 set is resolved at publish time: a `config()` read would cost folding. A call site that wants
@@ -726,3 +725,7 @@ Because nothing reads the set at runtime, you can also move it to `require-dev` 
 of production entirely. Weigh that against the fact that it becomes a build-time dependency:
 anyone who runs `shape:icon:add` needs it installed, and `composer install --no-dev` on a machine
 that publishes icons will not have it.
+
+---
+
+[← Icon](components/icon.md) · [Index](README.md) · [Theming →](theming.md)

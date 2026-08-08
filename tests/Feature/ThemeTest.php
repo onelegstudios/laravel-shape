@@ -39,11 +39,6 @@ function shapeThemeRules(): string
     return (string) preg_replace('#/\*.*?\*/#s', '', shapeTheme());
 }
 
-function shapeFile(string $path): string
-{
-    return (string) file_get_contents(__DIR__.'/../../'.$path);
-}
-
 /**
  * Tailwind's `@source inline()` brace expansion, so a safelist pattern can be
  * compared against the class names components actually render.
