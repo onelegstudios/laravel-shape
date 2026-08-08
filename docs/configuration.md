@@ -40,7 +40,7 @@ read from the validator rather than named at a call site. `affix` is which of tw
 of the field have when a `prefix` or a `suffix` is given, `inline` or `segmented`, and it is here
 because it is a house style: an application that sets its currency fields on a plate wants all of
 them on a plate. It buys nothing on a field with no affix. See
-[Components](components.md#prefix-and-suffix).
+[Components](components/input.md#prefix-and-suffix).
 
 Every other control is on the one size axis, listed separately rather than sharing the input's
 key. That is so an application can put its checkboxes on a different rung from its text fields —
@@ -68,3 +68,7 @@ The `icons` block — where published icons live, which library a set name point
 semantic aliases Shape's own components render through — is read by `shape:icon:add` and
 `shape:icon:update` when you publish an icon rather than on every render. It is documented with the component:
 [Icons](icons.md).
+
+---
+
+[← Theming](theming.md) · [Index](README.md) · [Performance →](performance.md)

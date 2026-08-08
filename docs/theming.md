@@ -2,7 +2,7 @@
 
 Shape requires **Tailwind CSS v4.1** or newer, and its components style themselves against
 theme tokens rather than bare palette steps. Importing the package's theme — see
-[Installation](../README.md#installation) — does two things: it defines the semantic colour
+[Installation](installation.md) — does two things: it defines the semantic colour
 roles the components use, and it tells Tailwind to scan the package's Blade views so the
 component classes are actually generated. Skip it and the components render unstyled.
 
@@ -200,7 +200,6 @@ leaving it alone. Shape gives those two a cursor and nothing else, and reserves 
 for `picker`, which Chromium draws at full contrast always. `cursor` never disturbs a reveal;
 `opacity` usually does.
 
-## Read next
+---
 
-- [Components](components.md) — the props that consume these roles
-- [Configuration](configuration.md) — setting a house style once
+[← Icons](icons.md) · [Index](README.md) · [Configuration →](configuration.md)

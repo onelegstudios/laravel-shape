@@ -20,9 +20,9 @@ use Onelegstudios\Shape\Icons\Libraries;
  * an action. A published icon stops tracking the set it came from, so the
  * directory drifts in two directions at once: the set moves under it when a
  * package is upgraded, and you move it yourself when you tune a glyph by hand.
- * Until this command there was one way to find out which had happened -- run
- * `shape:icon:update` and read what it rewrote -- and that answer costs the hand
- * edits it is reporting on.
+ * The other way to find out which has happened is to run `shape:icon:update` and
+ * read what it rewrote -- an answer that costs the hand edits it is reporting
+ * on, which is why looking is a verb of its own.
  *
  * Telling the two apart needs evidence, because from the outside they look
  * identical: both end as bytes on disk that differ from what the set renders
@@ -307,9 +307,9 @@ class CheckIconCommand extends Command
      * Whether a published file has been edited here, has been overtaken by its
      * set, or both.
      *
-     * An unstamped file is one published before the stamp existed. Its header
-     * cannot be compared -- the format of the header is the thing that changed --
-     * but the artwork below it still answers the half of the question that
+     * An unstamped file is one whose header carries no stamp to compare against --
+     * a header someone rewrote by hand, or a component written rather than
+     * published. The artwork below it still answers the half of the question that
      * matters most, and answering half is better than reporting a whole
      * directory as unknown. A hand edit that only touched the header goes
      * unnoticed there, which is the honest limit of the fallback and the reason
@@ -393,7 +393,7 @@ class CheckIconCommand extends Command
         if ($tally['unstamped'] > 0) {
             // Not a warning: nothing is wrong with these files. It is the reason
             // they were reported without saying whether anyone had edited them.
-            $this->components->info("{$tally['unstamped']} icon(s) predate Shape's stamp, so a hand edit cannot be told apart from an upgrade. The next update records one.");
+            $this->components->info("{$tally['unstamped']} icon(s) carry no stamp, so a hand edit cannot be told apart from an upgrade. The next update records one.");
         }
 
         if ($tally['skipped'] > 0) {

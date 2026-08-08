@@ -81,7 +81,7 @@ class AddIconCommand extends Command
 
         // Both resolve through config first and the packaged registry second, so
         // a set Shape knows brings its own names along and a set it does not is
-        // read exactly as it was before the registry existed.
+        // read from config alone.
         $prefix = $this->prefixFor($sets, $set);
         $aliases = $this->aliasesFor($config, $set);
 

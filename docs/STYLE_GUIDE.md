@@ -41,3 +41,7 @@ fix is to extend the theme so the whole library benefits, not to hardcode it.
   and run the **Component Checklist**.
 - Working on one dimension (color, spacing, hierarchy…)? Open the matching file in
   [`references/`](../.agents/skills/component-design/references/).
+
+---
+
+[← Performance](performance.md) · [Index](README.md)

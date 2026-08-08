@@ -15,10 +15,10 @@ declare(strict_types=1);
 | Four modes are compared:
 |
 |   blade    Blaze disabled entirely -- Blade's own component pipeline.
-|   runtime  Blaze on, but with the icon as it was before icons were published:
-|            resolving its set, its aliases and its SVG on every render. Those
+|   runtime  Blaze on, but with an icon that resolves rather than publishes:
+|            reading its set, its aliases and its SVG on every render. Those
 |            config reads make it unfoldable, so this is the ceiling the
-|            published icon had to beat.
+|            published icon is measured against.
 |   blaze    Blaze on, components as the package ships them. The icon is
 |            published and folds; the button still reads config and does not.
 |   fold     As shipped, plus a generated foldable button whose config-driven
@@ -288,11 +288,11 @@ function publishGalleryIcons(string $markup): void
 }
 
 /**
- * The icon component as it was before icons were published.
+ * The icon component as it would be without publishing.
  *
- * A faithful copy: set, aliases and size read from config on every render, and
- * Blade Icons asked for the SVG. It is the honest comparison for what
- * publishing bought, and it cannot fold -- those config reads are exactly what
+ * A faithful equivalent: set, aliases and size read from config on every render,
+ * and Blade Icons asked for the SVG. It is the honest comparison for what
+ * publishing buys, and it cannot fold -- those config reads are exactly what
  * folding would freeze.
  */
 function registerRuntimeIcon(string $scratch): void

@@ -216,9 +216,12 @@ follows the OS; add the `dark` or `light` class to force a subtree.
 
 Read before executing:
 
-- `docs/components.md` — every component, its props, and its states
+- `docs/README.md` — the index, listing every page in reading order
+- `docs/components.md` — the catalogue; `docs/components/<name>.md` for one component's props and
+  states, with helper components documented on their parent's page
 - `docs/icons.md` — sets, semantic names, and the five icon commands
 - `docs/theming.md` and `docs/configuration.md` — theme tokens and config keys
+- `docs/installation.md` and `docs/performance.md` — the installer's steps, and what Blaze folds
 
 Commands: `shape:install`, `shape:icon` (index), `shape:icon:add`, `shape:icon:remove`,
 `shape:icon:update`, `shape:icon:check`.

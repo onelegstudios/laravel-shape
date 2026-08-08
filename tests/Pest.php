@@ -52,6 +52,15 @@ function publishRequiredIcons(): void
 }
 
 /**
+ * Read a file from the package root, so a test can hold documentation or a
+ * stylesheet against the behaviour it describes.
+ */
+function shapeFile(string $path): string
+{
+    return (string) file_get_contents(__DIR__.'/../'.$path);
+}
+
+/**
  * @param  array<string, array<int, string>>  $messages
  */
 function seedErrors(array $messages): void

@@ -565,9 +565,8 @@ class InstallCommand extends Command
             return $named;
         }
 
-        // `--icons` predates there being more than one set to install and still
-        // means what it did: install what config names, ask nothing. So does
-        // having nobody to ask.
+        // `--icons` names no set of its own, so it means the narrow thing:
+        // install what config names, ask nothing. So does having nobody to ask.
         if ($this->option('icons') || ! $this->canAsk()) {
             return [$configured];
         }

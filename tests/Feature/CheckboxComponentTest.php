@@ -226,7 +226,7 @@ describe('a group', function () {
     it('is announced as a group rather than as loose boxes', function () {
         // The radio suite says the same thing for the same reason: without the
         // element, a set wired by `name` reads as unrelated controls plus a
-        // floating label -- and that label used to be a `for="tags"` pointing at an
+        // floating label -- and that label would be a `for="tags"` pointing at an
         // id no box carries.
         $html = Blade::render(<<<'BLADE'
             <shape:field name="tags" legend="Tags">

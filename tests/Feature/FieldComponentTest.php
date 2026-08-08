@@ -176,8 +176,8 @@ describe('a group', function () {
     });
 
     it('stays a plain div when only a label was named', function () {
-        // A field around one control is a label and a column, and this change is
-        // additive: naming `label` has to render exactly what it always did.
+        // A field around one control is a label and a column: naming `label` draws
+        // a plain div, and only `legend` opens a fieldset.
         $html = Blade::render('<shape:field name="email" label="Email"><shape:input /></shape:field>');
 
         expect($html)
@@ -333,7 +333,7 @@ describe('label', function () {
 
     it('stays at the field size when no rung was named', function () {
         // In a field the label is a line of its own and does not follow the
-        // control's scale, so unnamed has to render exactly what it always did.
+        // control's scale, so a label with no rung named renders at the field's.
         expect(Blade::render('<shape:label>Email</shape:label>'))
             ->toContain('text-sm font-medium');
     });

@@ -139,8 +139,7 @@ final class Libraries
      * The semantic names the library owning a set spells its own way.
      *
      * Empty for a set Shape does not know, which is the honest answer: an
-     * application's own set gets its names from `icons.aliases`, the same as it
-     * always did.
+     * application's own set gets its names from `icons.aliases` instead.
      *
      * @return array<string, string>
      */

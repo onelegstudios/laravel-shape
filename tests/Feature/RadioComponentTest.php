@@ -242,8 +242,8 @@ describe('a group', function () {
         // unrelated controls to anything reading the page. The element is the only
         // thing that says otherwise.
         //
-        // `for="plan"` is the bug this replaced, stated as an assertion: the group's
-        // name used to be a <label> pointing at an id nothing renders. Safe to match
+        // `for="plan"` is the bug this guards against, stated as an assertion: a
+        // group named by a <label> points at an id nothing renders. Safe to match
         // on, because `for="plan-free"` does not contain the closing quote.
         $html = Blade::render(<<<'BLADE'
             <shape:field name="plan" legend="Plan">
