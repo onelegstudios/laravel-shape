@@ -23,6 +23,24 @@ function renderedButtonMatrix(): string
     return $html;
 }
 
+/**
+ * A header with every part in it and both item states, rendered. The component the
+ * page-surface tokens exist for, and the only one that paints a surface no colour
+ * role has an answer for.
+ */
+function renderedHeader(): string
+{
+    return Blade::render(<<<'BLADE'
+        <shape:header sticky>
+            <shape:header.brand href="/">Acme</shape:header.brand>
+            <shape:header.nav>
+                <shape:header.item href="/docs" current>Docs</shape:header.item>
+                <shape:header.item href="/blog">Blog</shape:header.item>
+            </shape:header.nav>
+        </shape:header>
+        BLADE);
+}
+
 function shapeTheme(): string
 {
     return shapeFile('resources/css/shape.css');
@@ -137,6 +155,42 @@ it('defines every colour token its components reference', function () {
 
     expect($tokens)->not->toBeEmpty()
         ->and($missing)->toBe([]);
+});
+
+it('defines the page surfaces the header paints itself with', function () {
+    // The button matrix above cannot answer for these: the header is the first
+    // component to reach for a token that is not a role, and a `bg-chrome` the theme
+    // forgot resolves to nothing rather than failing a build.
+    $html = renderedHeader();
+
+    preg_match_all('/\b(?:bg|text|border)-(chrome|hairline|surface|surface-muted|ink|ink-muted)\b/', $html, $matches);
+
+    $tokens = array_values(array_unique($matches[1]));
+
+    $theme = shapeTheme();
+
+    $missing = array_values(array_filter(
+        $tokens,
+        static fn (string $token): bool => ! str_contains($theme, '--color-'.$token.':'),
+    ));
+
+    expect($tokens)->toContain('chrome', 'hairline')
+        ->and($missing)->toBe([]);
+});
+
+it('keeps the page surfaces out of the shape a role has', function () {
+    // `--color-chrome-border` would read as a seventh colour role to the test below,
+    // which is the reason these are named for the material alone. Pinned here rather
+    // than left to that test failing, because the failure it produces names the role
+    // list and not the token that joined it.
+    preg_match_all('/--color-(chrome|hairline)([a-z-]*):/', shapeTheme(), $matches);
+
+    expect($matches[1])->not->toBeEmpty()
+        ->and(array_values(array_unique($matches[2])))->toBe(['']);
+});
+
+it('resolves the header\'s dark mode in the theme too', function () {
+    expect(renderedHeader())->not->toContain('dark:');
 });
 
 it('keeps components off bare ramp steps so surfaces stay themeable', function () {

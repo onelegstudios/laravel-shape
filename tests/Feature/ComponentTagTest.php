@@ -20,19 +20,21 @@ it('renders a self-closing branded shape tag', function () {
     expect($html)->toContain('<button');
 });
 
-it('rewrites a dotted tag to the component in the subdirectory', function () {
-    // The package's only nested pair, and the only thing that exercises a dot in the
-    // branded syntax. The rewrite never consumes the name -- it matches the opener
-    // and hands the rest to Blade, whose own tag patterns allow a dot -- so this
-    // works by not being special-cased. Worth pinning anyway: nothing else would
-    // catch a lookahead that started eating the name.
-    $html = Blade::render('<shape:input.prefix>$</shape:input.prefix>');
+it('rewrites a dotted tag to the component in the subdirectory', function (string $tag, string $element) {
+    // The two families with views in a subdirectory, and the only thing that
+    // exercises a dot in the branded syntax. The rewrite never consumes the name --
+    // it matches the opener and hands the rest to Blade, whose own tag patterns
+    // allow a dot -- so this works by not being special-cased. Worth pinning anyway:
+    // nothing else would catch a lookahead that started eating the name.
+    $html = Blade::render($tag);
 
     expect($html)
-        ->toContain('<span')
-        ->toContain('$')
-        ->not->toContain('shape:input.prefix');
-});
+        ->toContain($element)
+        ->not->toContain('shape:');
+})->with([
+    'the input affix' => ['<shape:input.prefix>$</shape:input.prefix>', '<span'],
+    'a header nav item' => ['<shape:header.item href="/">Docs</shape:header.item>', '<a'],
+]);
 
 it('resolves the same component through the x-shape namespace', function () {
     $html = Blade::render('<x-shape::button>Save</x-shape::button>');

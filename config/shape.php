@@ -91,6 +91,34 @@ return [
             'size' => 'md',
         ],
 
+        // The two pieces of page furniture, and the first keys here that are not
+        // about a form. `size` buys what it buys everywhere else -- the bar's
+        // height and the room around its contents -- and `container` is the width
+        // the bar centres its contents in, which is a house style if anything is:
+        // a page that runs its content to `5xl` wants its header to stop there
+        // too, and saying so once is the difference between that and writing it on
+        // every layout.
+        //
+        // There is no `sticky` here, and its absence is a decision. Whether a bar
+        // follows the scroll is a property of the page it is on rather than of the
+        // application -- a marketing page and an admin panel disagree about it in
+        // the same codebase. It is also the one thing that could not live here: the
+        // components read this file through `array_filter(..., 'is_string')`, and a
+        // boolean would be dropped on the way past.
+        'header' => [
+            'size' => 'md',
+            'container' => '7xl',
+        ],
+
+        // Only a size, because the other axis is not a style. A heading's `level`
+        // says where it sits in the document outline, which is a fact about the
+        // page rather than a default worth setting -- and one an application would
+        // be wrong to set globally, since every page's first heading is an h1 and
+        // nothing else on it is.
+        'heading' => [
+            'size' => 'md',
+        ],
+
         // The icon takes no defaults from here. It renders published components,
         // and folding those away at compile time is only safe while the component
         // reads nothing global -- a `size` default read from config would be

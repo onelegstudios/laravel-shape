@@ -17,10 +17,12 @@ at the top on a fresh install, or jump to the component you are building with.
 12. [Range](components/range.md) — a slider on the input's heights, with no box around it
 13. [Color](components/color.md) — the native picker as a square swatch
 14. [Icon](components/icon.md) — the component, for the places a prop cannot say it
-15. [Icons](icons.md) — publishing icons, sets, semantic names, accessibility, and the five commands
-16. [Theming](theming.md) — colour roles, surface tokens, page surfaces, adding a role, dark mode
-17. [Configuration](configuration.md) — component defaults in `config/shape.php`
-18. [Performance](performance.md) — what Blaze does with these components, and what folds
-19. [Style Guide](STYLE_GUIDE.md) — the design guidance the components are built to
+15. [Header](components/header.md) — the page bar, its brand, nav and items, and why it claims no landmark
+16. [Heading](components/heading.md) — a title, its description and its actions, with level kept apart from size
+17. [Icons](icons.md) — publishing icons, sets, semantic names, accessibility, and the five commands
+18. [Theming](theming.md) — colour roles, surface tokens, page surfaces, adding a role, dark mode
+19. [Configuration](configuration.md) — component defaults in `config/shape.php`
+20. [Performance](performance.md) — what Blaze does with these components, and what folds
+21. [Style Guide](STYLE_GUIDE.md) — the design guidance the components are built to
 
 Every page carries previous and next links back to this list, so the whole set reads end to end.

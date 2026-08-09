@@ -728,4 +728,4 @@ that publishes icons will not have it.
 
 ---
 
-[← Icon](components/icon.md) · [Index](README.md) · [Theming →](theming.md)
+[← Heading](components/heading.md) · [Index](README.md) · [Theming →](theming.md)
