@@ -188,6 +188,22 @@
    -- slate-500 on white is 4.8:1, slate-400 on slate-900 is 7.1:1 -- which is
    what makes them safe for text rather than only for hairlines.
 
+   `chrome` is the last two's opposite number: the material a page's furniture is
+   made of rather than its content -- the bar the header draws. It ships the same
+   value as `surface` and is a separate token anyway, because the two answer to
+   different people. An application that wants a tinted bar above white fields has
+   one token to set; sharing `surface` would mean tinting every text input on the
+   page to get there.
+
+   `hairline` is the line under that bar, and it is deliberately lighter than
+   `neutral-border`: a divider separating a page's regions wants less weight than
+   the edge of a control you can type into. One step up the ramp in each scheme is
+   the whole difference -- 200/800 against 300/700.
+
+   Neither of these takes a `-fill` or `-border` suffix, and that is load-bearing
+   rather than taste. The suffixed spelling is what marks a *role*, and a test
+   reads the file for it to hold the role list at six.
+
    Override these to sit a field on a tinted page, or to give the library a
    warmer ink than its neutral ramp:
 
@@ -201,6 +217,8 @@
     --color-surface-muted: light-dark(var(--color-neutral-100), var(--color-neutral-800));
     --color-ink: light-dark(var(--color-neutral-900), var(--color-neutral-100));
     --color-ink-muted: light-dark(var(--color-neutral-500), var(--color-neutral-400));
+    --color-chrome: light-dark(var(--color-white), var(--color-neutral-900));
+    --color-hairline: light-dark(var(--color-neutral-200), var(--color-neutral-800));
 }
 
 /* ---------------------------------------------------------------------------

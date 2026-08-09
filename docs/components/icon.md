@@ -24,4 +24,4 @@ knowing on a page that renders hundreds of them — see [Performance](../perform
 
 ---
 
-[← Color](color.md) · [Index](../README.md) · [Icons →](../icons.md)
+[← Color](color.md) · [Index](../README.md) · [Header →](header.md)

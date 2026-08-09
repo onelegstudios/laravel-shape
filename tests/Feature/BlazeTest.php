@@ -130,7 +130,23 @@ it('leaves the field components on blade\'s own pipeline', function (string $tag
     // find nothing there and quietly size every affix from config.
     'the prefix' => ['<shape:input.prefix>$</shape:input.prefix>'],
     'the suffix' => ['<shape:input.suffix>USD</shape:input.suffix>'],
+    // The header family joins for the same reason and not the same shape: only the
+    // item reads `@aware`, and the other three sit out with it because a header
+    // compiled by Blaze and an item by Blade would size from two different places.
+    // Same invisible failure -- the bar renders, the items just take the configured
+    // rung rather than the one written on the header.
+    'the header' => ['<shape:header><shape:header.item href="/">Docs</shape:header.item></shape:header>'],
+    'the brand' => ['<shape:header.brand href="/">Acme</shape:header.brand>'],
+    'the nav' => ['<shape:header.nav>Links</shape:header.nav>'],
+    'the item' => ['<shape:header.item href="/">Docs</shape:header.item>'],
 ]);
+
+it('compiles the heading through blaze, since nothing in it reads @aware', function () {
+    // The one new component that is not in the list above, and pinned so that the
+    // family's opt-out does not quietly spread to a file with no reason to take it.
+    expect(Blade::compileString('<shape:heading>Title</shape:heading>'))
+        ->toContain('$__blaze');
+});
 
 it('memoizes neither component', function () {
     // Memoization caches rendered output against the call site alone. The icon has

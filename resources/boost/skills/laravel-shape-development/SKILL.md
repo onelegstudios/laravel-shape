@@ -2,7 +2,7 @@
 name: laravel-shape-development
 description: >
   Configure and apply the Shape package in Laravel applications: install the theme and an icon
-  set, then build forms and buttons from the shape: Blade components.
+  set, then build forms, buttons and page chrome from the shape: Blade components.
 license: MIT
 metadata:
   author: Henrik Persson
@@ -11,8 +11,8 @@ metadata:
 # Shape
 
 Use this skill when a Laravel application needs to integrate `onelegstudios/laravel-shape` — a set
-of Blade UI components for buttons, form controls and icons, styled with Tailwind CSS v4 theme
-tokens.
+of Blade UI components for buttons, form controls, icons and page chrome, styled with Tailwind CSS
+v4 theme tokens.
 
 ## Primary Goal
 
@@ -189,15 +189,62 @@ The parts are `<shape:field>`, `<shape:label>`, `<shape:legend>`, `<shape:descri
 <shape:icon name="check" size="sm" />
 ```
 
+**Page furniture** — `header` and `heading`, the two components that are not part of a form.
+
+`<shape:header>` is the bar across the top of a page: `size` (the usual four rungs), `container`
+(`3xl`…`7xl` or `full`, where the contents stop centring) and `sticky`. It renders a full-width
+`<header>` with a track inside it, so `class` restates the chrome and the contents still line up with
+the page. Its three parts are `header.brand` (an `<a>` with `href`, a `<div>` without),
+`header.nav` (a labelled `<nav>`) and `header.item` (a link, with `current` for the page you are on):
+
+```blade
+<shape:header sticky>
+    <shape:header.brand href="/">Acme</shape:header.brand>
+
+    <shape:header.nav class="ms-auto">
+        <shape:header.item href="/docs" current>Docs</shape:header.item>
+        <shape:header.item href="/blog">Blog</shape:header.item>
+    </shape:header.nav>
+
+    <shape:button size="sm" variant="solid" color="primary">Sign in</shape:button>
+</shape:header>
+```
+
+Items take the header's rung unless they name their own. `current` writes `aria-current="page"` as
+well as the tint. The nav is labelled `Main`; give a second nav in the same bar its own `aria-label`.
+The component writes **no** `role="banner"` — a `<header>` outside an article, aside, main, nav or
+section already is that landmark, and the component is equally usable where it would be wrong. Shape
+ships no JavaScript, so hiding the nav on a narrow viewport and opening it from a button is the
+application's (`class="hidden md:flex"` plus your own Alpine or Livewire toggle).
+
+`<shape:heading>` is a title with its description and actions. `level` is the outline (`<h1>`…`<h6>`,
+default `2`) and `size` is the type — two props because they are two facts, so a deep section can read
+large without claiming to be the page's first heading:
+
+```blade
+<shape:heading level="1" size="lg" description="Everyone with access to this workspace.">
+    <x-slot:actions>
+        <shape:button size="sm" variant="solid" color="primary">Invite</shape:button>
+    </x-slot:actions>
+
+    Team members
+</shape:heading>
+```
+
+A title on its own renders a bare `<h*>` with no wrapper; a `description` or an `actions` slot wraps
+it in a `<header>` and stacks or rows accordingly. `class` lands on whichever came out outermost.
+
 ### 5. Configure defaults, if asked
 
 ```bash
 php artisan vendor:publish --tag="shape-config"
 ```
 
-`config/shape.php` has `components.{button,input,select,textarea,checkbox,radio,switch,file,range,color}`
-(a `size` each, plus `variant` and `color` on the button and `affix` on the input) and
-`icons.{path,set,sets,aliases}`. Config is merged
+`config/shape.php` has
+`components.{button,input,select,textarea,checkbox,radio,switch,file,range,color,header,heading}`
+(a `size` each, plus `variant` and `color` on the button, `affix` on the input and `container` on the
+header) and `icons.{path,set,sets,aliases}`. The header's `sticky` and the heading's `level` are not
+config keys and are named per call site. Config is merged
 one level deep, so a published file replaces each block wholesale — do not delete keys from it.
 
 Rebrand through the theme rather than the config or the views:
@@ -211,6 +258,11 @@ Rebrand through the theme rather than the config or the views:
 
 Dark mode is handled in the theme with `light-dark()`, so components carry no `dark:` classes. It
 follows the OS; add the `dark` or `light` class to force a subtree.
+
+Page surfaces are named for the material rather than a role: `--color-surface` and
+`--color-surface-muted` for a control's face, `--color-ink` and `--color-ink-muted` for text, and
+`--color-chrome` and `--color-hairline` for a page's furniture. `chrome` ships the same value as
+`surface` and is separate so that a tinted header does not tint every field on the page.
 
 ## Rules, References, and Templates
 

@@ -49,11 +49,13 @@ workbench:
           - download
           - error
           - info
+          - menu
           - monitor
           - moon
           - search
           - select-chevron
           - settings
+          - sparkles
           - spinner
           - sun
           - trash-2

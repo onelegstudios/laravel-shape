@@ -36,6 +36,8 @@ own.
 | [Range](components/range.md) | A slider on the input's heights, and the one control in the family with no box around it |
 | [Color](components/color.md) | The native picker as a square swatch at the height of the field beside it |
 | [Icon](components/icon.md) | A published icon, for the places a prop cannot say it. The full story is in [Icons](icons.md) |
+| [Header](components/header.md) | The bar across the top of a page, and the three parts it holds: `brand`, `nav` and the items in it |
+| [Heading](components/heading.md) | A title with its description and its actions, where `level` is the outline and `size` is the type |
 
 ## Where to go next
 

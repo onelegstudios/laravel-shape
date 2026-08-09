@@ -72,8 +72,21 @@ a real `<fieldset>` so the set is announced as one:
 </shape:field>
 ```
 
-The button, the field and its parts, and a control for every kind of input the browser draws.
-[Components](docs/components.md) lists them, each with a page of its own.
+Above the form, the page's own furniture — a header that draws the bar, its brand and its nav,
+and a heading that keeps where a title sits in the outline apart from how large it reads:
+
+```blade
+<shape:header sticky>
+    <shape:header.brand href="/">Acme</shape:header.brand>
+
+    <shape:header.nav class="ms-auto">
+        <shape:header.item href="/docs" current>Docs</shape:header.item>
+    </shape:header.nav>
+</shape:header>
+```
+
+The button, the field and its parts, a control for every kind of input the browser draws, and the
+two pieces of page chrome. [Components](docs/components.md) lists them, each with a page of its own.
 
 ## Documentation
 

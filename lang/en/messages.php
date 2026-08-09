@@ -18,4 +18,15 @@ return [
 
     ],
 
+    'header' => [
+
+        // The accessible name of the `<nav>` inside the bar. A landmark is only
+        // worth having if it can be told from the others, and a page with a header
+        // nav and a footer nav has two -- so this is what a screen reader's landmark
+        // list calls this one. Merged as a default, so a bar with a second nav in it
+        // names that one at the call site and leaves this alone.
+        'nav' => 'Main',
+
+    ],
+
 ];
