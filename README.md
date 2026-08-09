@@ -46,47 +46,7 @@ defaults are the quiet option (`outline` / `neutral`), so the prominent button o
 an explicit choice rather than the one you get by accident — and the defaults are configurable
 if that's the wrong starting point for your application.
 
-`icon` and `icon-trailing` put a published icon either side of the label, sized to the
-button's own rung so the two cannot drift apart. A button given an icon and no label squares
-up into an icon button — give that one an `aria-label`.
-
-A form field is one tag or five, whichever the screen needs:
-
-```blade
-<shape:input label="Email" description="We never share it." wire:model="email" />
-```
-
-That writes the label, the control, the help text and the validation message, wires the label
-to the control, and reads its invalid state out of the error bag by itself. When the shorthand
-can't say it, the parts are there — `<shape:field>`, `<shape:label>`, `<shape:legend>`,
-`<shape:description>` and `<shape:error>` — and naming the field once is what keeps them in
-agreement.
-
-A group of checkboxes or radios is a field that takes `legend` instead of `label`, which renders
-a real `<fieldset>` so the set is announced as one:
-
-```blade
-<shape:field name="plan" legend="Plan">
-    <shape:radio value="free" label="Free" />
-    <shape:radio value="pro" label="Pro" />
-</shape:field>
-```
-
-Above the form, the page's own furniture — a header that draws the bar, its brand and its nav,
-and a heading that keeps where a title sits in the outline apart from how large it reads:
-
-```blade
-<shape:header sticky>
-    <shape:header.brand href="/">Acme</shape:header.brand>
-
-    <shape:header.nav class="ms-auto">
-        <shape:header.item href="/docs" current>Docs</shape:header.item>
-    </shape:header.nav>
-</shape:header>
-```
-
-The button, the field and its parts, a control for every kind of input the browser draws, and the
-two pieces of page chrome. [Components](docs/components.md) lists them, each with a page of its own.
+For all components, see [components](docs/components.md); it lists them all, each with its own page.
 
 ## Documentation
 
