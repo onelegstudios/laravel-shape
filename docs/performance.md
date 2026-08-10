@@ -142,6 +142,18 @@ render; on a page of shorthand it is worth nothing.
 That sharpens the advice below rather than changing it: writing a field out was already the
 cheaper of the two, and it now folds its wrapper as well.
 
+## The header folds too
+
+All four parts — the [header](components/header.md), the brand, the nav and the item — fold, so a
+bar written with literal attributes leaves no components behind at all. The rung still reaches the
+items: Blaze wraps a folded call site whose children read `@aware` in a push of the attributes
+written on the tag, so `<shape:header size="lg">` sizes the items inside it as it always did. Bind
+the rung at either end and the items decline instead of folding against a value nobody knows yet.
+
+The nav's landmark name is translated, and a translation resolved at compile time would serve one
+locale to everybody — so that lookup is held back to render time in an island, exactly as the
+button's spinner label is.
+
 ## What does not fold, and why
 
 **The controls do not fold** — the input, select, textarea, checkbox, radio, file input, switch,
@@ -163,6 +175,12 @@ that merge erases. A checkbox in a group would start printing the field's messag
 every box, and a `wire:model` control would pick up a `name` attribute its binding meant to
 replace. Both are well-formed markup, which is what makes them worth refusing rather than
 shipping.
+
+Inheriting through `@aware` is not itself the problem, which the header above is the proof of: a
+nav item inherits its rung the same way and folds anyway. What separates them is what the
+component does with the answer. An item only needs the *value* — a rung written on the tag and one
+handed down from the bar mean the same thing — while a control branches on where the value came
+from.
 
 Two things that *used* to keep the controls out no longer do, and both changed to get them
 closer:

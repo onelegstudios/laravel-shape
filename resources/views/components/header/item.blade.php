@@ -1,10 +1,25 @@
-@blaze
+@blaze(fold: true)
 
 {{-- `@blaze`, and this is the file the family's decision turns on: the `@aware`
      below is the thing Blaze and Blade compile differently, which is why all four
      move together. See the top of header.blade.php. The bag is saved and restored
      around it because the `size` read below is a read of the caller's own value;
-     input.blade.php has the reason. --}}
+     input.blade.php has the reason.
+
+     `fold: true` on an `@aware` component, which the form controls are refused --
+     so the difference is worth stating, because it is the whole of why this one is
+     safe. Folding resolves `@aware` by merging the inherited value into this
+     component's own attribute bag, so the read below can no longer tell a rung
+     written here from one that came down from the header. It does not need to: both
+     spellings mean the same rung, the precedence lands on the same value either
+     way, and `except('size')` takes the key off the bag before anything renders. A
+     control asks that question to decide whether it owns its own validation
+     message, and gets a different answer for it -- see the top of field.blade.php.
+
+     A bound rung declines the fold rather than folding wrong, which matters here:
+     a placeholder would pass the `is_string` test below, miss the table, and render
+     a `md` item. `size` is an `@aware` key and Blaze treats those as unsafe, so
+     `:size` on this tag and `:size` on the header above it both decline. --}}
 
 {{-- No `@props` for `size`, which is the decision rather than an omission, and the
      hazard is the one input/prefix.blade.php spells out: `@aware` assigns

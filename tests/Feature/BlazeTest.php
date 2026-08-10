@@ -214,8 +214,8 @@ it('optimises the branded tag and the namespaced tag the same way', function () 
         ->toBe(Blade::compileString('<x-shape::button>Save</x-shape::button>'));
 });
 
-it('compiles the field and header families through blaze', function (string $tag) {
-    // The two families move as a unit, which is the part that has to hold: `@aware`
+it('compiles the rest of the field family through blaze', function (string $tag) {
+    // The family moves as a unit, which is the part that has to hold: `@aware`
     // reads the render stack, so a field compiled by one pipeline and a label by
     // the other would read two different names. Every member is asserted here
     // rather than a representative few, because the failure mode of a single file
@@ -258,15 +258,6 @@ it('compiles the field and header families through blaze', function (string $tag
     // this file can only see which pipeline compiled it.
     'the prefix' => ['<shape:input.prefix>$</shape:input.prefix>'],
     'the suffix' => ['<shape:input.suffix>USD</shape:input.suffix>'],
-    // The header family joins for the same reason and not the same shape: only the
-    // item reads `@aware`, and the other three move with it because a header
-    // compiled by one pipeline and an item by the other would size from two
-    // different places. Same invisible failure -- the bar renders, the items just
-    // take the configured rung rather than the one written on the header.
-    'the header' => ['<shape:header><shape:header.item href="/">Docs</shape:header.item></shape:header>'],
-    'the brand' => ['<shape:header.brand href="/">Acme</shape:header.brand>'],
-    'the nav' => ['<shape:header.nav>Links</shape:header.nav>'],
-    'the item' => ['<shape:header.item href="/">Docs</shape:header.item>'],
 ]);
 
 describe('the error message', function () {
@@ -505,6 +496,88 @@ describe('the field', function () {
 
         expect($labels[1])->toHaveCount(3)
             ->and($labels[1])->toBe($controls[1]);
+    });
+});
+
+describe('the header family', function () {
+    // All four fold, which makes this the one `@aware` component in the package
+    // allowed to -- and the difference from the controls is the whole reason it is
+    // allowed. Folding resolves `@aware` by merging the inherited value into the
+    // component's own attribute bag, so a folded item can no longer tell a rung
+    // written on its tag from one that came down from the header. It does not need
+    // to: both mean the same rung, and `except('size')` takes the key off the bag
+    // before anything renders. A control asks the same question to decide whether it
+    // owns its own validation message, and is refused the fold for it.
+
+    it('folds every member', function (string $tag, string $marker) {
+        expect(Blade::compileString($tag))
+            ->toContain('[BlazeFolded]:{'.$marker.'}')
+            ->not->toContain('renderComponent');
+    })->with([
+        'the header' => ['<shape:header><shape:header.item href="/">Docs</shape:header.item></shape:header>', 'shape::header'],
+        'the brand' => ['<shape:header.brand href="/">Acme</shape:header.brand>', 'shape::header.brand'],
+        'the nav' => ['<shape:header.nav>Links</shape:header.nav>', 'shape::header.nav'],
+        'the item' => ['<shape:header.item href="/">Docs</shape:header.item>', 'shape::header.item'],
+    ]);
+
+    it('carries the rung through the fold to an item that never wrote one', function () {
+        // `@aware` reads the render stack and folding runs before there is one, so
+        // what stands in for it is Blaze wrapping a folded call site in a `pushData()`
+        // of the attributes written on the tag. Without it the bar would still render
+        // -- every item just taking the configured rung rather than the one asked
+        // for, which is the invisible failure this family has always been pinned
+        // against.
+        expect(Blade::render('<shape:header size="lg"><shape:header.item href="/">Docs</shape:header.item></shape:header>'))
+            ->toContain('px-3.5 py-2 text-base');
+    });
+
+    it('declines to fold an item whose rung is bound, at either end', function () {
+        // A placeholder would pass the `is_string` test in the item, miss the rung
+        // table and render an `md` item -- silently, and only for the call sites that
+        // bound a value. `size` is an `@aware` key and Blaze treats those as unsafe,
+        // which covers the header above as well as the item itself.
+        expect(Blade::compileString('<shape:header.item :size="$rung" href="/">Docs</shape:header.item>'))
+            ->not->toContain('[BlazeFolded]:{shape::header.item}');
+
+        expect(Blade::compileString('<shape:header :size="$rung"><shape:header.item href="/">Docs</shape:header.item></shape:header>'))
+            ->not->toContain('[BlazeFolded]:{shape::header.item}');
+    });
+
+    it('folds the nav without baking its translated landmark name', function () {
+        // The one read in this family that no invalidation could repair, and the
+        // button's problem exactly: `__()` resolves against the request's locale, so
+        // a folded call would serve whichever locale compiled the view to everyone
+        // after it. The island is what keeps the lookup.
+        $compiled = Blade::compileString('<shape:header.nav>Links</shape:header.nav>');
+
+        expect($compiled)
+            ->toContain('[BlazeFolded]:{shape::header.nav}')
+            ->toContain("__('shape::messages.header.nav')")
+            ->not->toContain(__('shape::messages.header.nav'));
+    });
+
+    it('follows a locale change on a nav it has already folded', function () {
+        // The claim a single render cannot support: a frozen label satisfies every
+        // assertion about the first render and fails only on the second.
+        app('translator')->addLines(['messages.header.nav' => 'Navigation principale'], 'fr', 'shape');
+
+        $english = Blade::render('<shape:header.nav>Links</shape:header.nav>');
+
+        app()->setLocale('fr');
+
+        expect($english)->toContain('aria-label="Main"')
+            ->and(Blade::render('<shape:header.nav>Links</shape:header.nav>'))
+            ->toContain('aria-label="Navigation principale"');
+    });
+
+    it('leaves the landmark name where it was for a nav that named its own', function () {
+        // The package's default and a call site's own value no longer reach the
+        // element by the same route -- theirs is baked with the bag, ours is looked
+        // up per render -- so the attribute's position had to be put back by hand.
+        // Asserted because the alternative is a silent diff in the markup of every
+        // application that names one.
+        expect(Blade::render('<shape:header.nav aria-label="Utilities">Links</shape:header.nav>'))
+            ->toContain('<nav aria-label="Utilities" class=');
     });
 });
 

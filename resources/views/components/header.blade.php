@@ -1,4 +1,4 @@
-@blaze
+@blaze(fold: true)
 
 {{-- `@blaze`, and the reason is the family's rather than this file's own.
      `header/item.blade.php` reads the `size` below through `@aware`, and the two
@@ -6,7 +6,20 @@
      at length. A header compiled by one and an item by the other would size from
      two different places, and the markup would render either way, so the four
      files move together. Nothing to save and restore here: no `@aware` in this
-     file. --}}
+     file.
+
+     `fold: true` is this file's own, and what it turns on is that `size` has to
+     keep reaching the items after this component stops existing. Blaze arranges
+     it: a folded call site whose children read `@aware` is wrapped in a
+     `pushData()` of the attributes written on the tag, so an item inside still
+     finds the rung. Where the tag named none there is nothing to push and nothing
+     to find -- which is the answer this file already gave, since `@aware` reads
+     the call site's attributes rather than the `$size` resolved below.
+
+     The `config()` read is a compile-time input now, the trade the button
+     documented: ShapeServiceProvider stamps config/shape.php as a fold dependency,
+     so editing a published default invalidates the views that baked it, but a
+     default set at runtime no longer reaches a folded header. --}}
 
 @props([
     'size' => null,

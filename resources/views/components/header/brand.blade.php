@@ -1,6 +1,11 @@
-@blaze
+@blaze(fold: true)
 
-{{-- `@blaze`, for the family's reason: see the top of header.blade.php. --}}
+{{-- `@blaze`, for the family's reason: see the top of header.blade.php.
+
+     `fold: true` needs no argument of its own here, which is the shortest entry in
+     the package: no `@aware` to resolve, no config to bake, nothing per-request to
+     read. `href` is a declared prop, so the one branch this file has is settled at
+     compile time or the fold declines. --}}
 
 {{-- `href` is a prop here and is not one on `header.item`, which looks like an
      inconsistency and is not. This component switches element on it -- a wordmark
