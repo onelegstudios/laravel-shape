@@ -1,4 +1,8 @@
-{{-- No `@blaze`: see the note at the top of field.blade.php. --}}
+@blaze
+
+{{-- `@blaze`: see the note at the top of field.blade.php. The bag is saved and
+     restored around `@aware` for the reason input.blade.php spells out -- kept here
+     as well as where it is read, so the family's `@aware` all looks the same. --}}
 
 @props(['size' => null])
 
@@ -6,7 +10,15 @@
      unsetting every variable whose name matches an attribute it did not claim,
      and `name` is not a prop here. --}}
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['name' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     // An id, so the control can name this element in its `aria-describedby`. It is

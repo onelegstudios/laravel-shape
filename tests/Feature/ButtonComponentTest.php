@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\View;
+use Illuminate\View\Component;
 use Onelegstudios\Shape\Tests\TestCase;
 
 /**
@@ -17,6 +19,35 @@ function labelWrapper(string $html): string
     preg_match('/<span class="contents[^"]*">(.*?)<\/span>/s', $html, $matches);
 
     return $matches[1] ?? '';
+}
+
+/**
+ * Render a button against a config the compiler has not seen yet.
+ *
+ * The button folds, so `config('shape')` is read once, when the calling template
+ * is compiled -- which makes `config()->set()` on its own prove nothing here. A
+ * template already compiled by an earlier test carries the defaults that were in
+ * force then, and a set afterwards never reaches it.
+ *
+ * Clearing the compiled views first is what puts the set back in play, and it is
+ * the honest shape of the contract rather than a way around it: an application
+ * changes these defaults by editing config/shape.php, which invalidates exactly
+ * the views that baked them (see BlazeTest). Runtime `Config::set` is the thing
+ * folding gave up, and no test here should read as though it still worked.
+ */
+function renderFreshly(string $template): string
+{
+    File::cleanDirectory(TestCase::compiledViewPath());
+
+    // `Blade::render` writes the string to a .blade.php in that same directory and
+    // resolves it through the finder. Two caches remember that it did: Component
+    // keeps the view name against the string's hash, and the finder keeps the path
+    // against the name. Clearing the directory and neither of them hands the next
+    // render a path to a file that is no longer there.
+    Component::flushCache();
+    View::getFinder()->flush();
+
+    return Blade::render($template);
 }
 
 it('defaults to the quiet button so the primary action stays opt-in', function () {
@@ -161,7 +192,7 @@ it('takes the value of every unnamed prop from config', function () {
         'size' => 'lg',
     ]);
 
-    expect(Blade::render('<shape:button>Save</shape:button>'))
+    expect(renderFreshly('<shape:button>Save</shape:button>'))
         ->toBe(Blade::render('<shape:button variant="solid" color="primary" size="lg">Save</shape:button>'));
 });
 
@@ -173,7 +204,7 @@ it('lets a call site override the configured default', function () {
         'size' => 'lg',
     ]);
 
-    expect(Blade::render('<shape:button variant="ghost" color="danger" size="xs">Delete</shape:button>'))
+    expect(renderFreshly('<shape:button variant="ghost" color="danger" size="xs">Delete</shape:button>'))
         ->toContain('text-danger-on-tint')
         ->toContain('px-2 py-1 text-xs')
         ->not->toContain('bg-primary-fill');
@@ -183,11 +214,11 @@ it('ships config defaults that match the fallbacks baked into the component', fu
     // The component repeats the packaged defaults as a floor, which makes them
     // two copies of one fact -- and two copies drift. Rendering with the shipped
     // config and then with no config at all has to come out identical.
-    $configured = Blade::render('<shape:button>Save</shape:button>');
+    $configured = renderFreshly('<shape:button>Save</shape:button>');
 
     config()->set('shape.components.button', null);
 
-    expect(Blade::render('<shape:button>Save</shape:button>'))->toBe($configured);
+    expect(renderFreshly('<shape:button>Save</shape:button>'))->toBe($configured);
 });
 
 it('falls back to a packaged default rather than rendering an unstyled button', function (mixed $configured) {
@@ -196,7 +227,7 @@ it('falls back to a packaged default rather than rendering an unstyled button', 
     // must not happen is a prop resolving to nothing and a class landing empty.
     config()->set('shape.components.button', $configured);
 
-    expect(Blade::render('<shape:button>Save</shape:button>'))
+    expect(renderFreshly('<shape:button>Save</shape:button>'))
         ->toContain('border-neutral-border')
         ->toContain('gap-2 px-4 py-2 text-sm');
 })->with([
@@ -440,8 +471,12 @@ describe('icon', function () {
             // toolbar row, which is the only thing this second scale buys. The
             // padding is not the rung's own `py`: it closes the gap between the
             // icon's height and the line-height a label would have had.
+            //
+            // Matched with its surrounding spaces, because `p-2` is a substring of
+            // the `gap-2` a labelled button carries -- a bare `toContain` here
+            // passes against the very padding it is meant to rule out.
             expect(Blade::render('<shape:button size="'.$size.'" icon="check" />'))
-                ->toContain($expected);
+                ->toContain(' '.$expected.' ');
         })->with([
             'xs holds the WCAG 2.5.8 floor at 24px' => ['xs', 'p-1.25'],
             'sm suits a toolbar at 32px' => ['sm', 'p-2'],
@@ -460,11 +495,40 @@ describe('icon', function () {
                 ->not->toContain('gap-2');
         });
 
-        it('reads a slot of nothing but whitespace as no label', function () {
-            // Which is how anyone who indents their Blade writes one.
-            $html = Blade::render("<shape:button icon=\"check\">\n    \n</shape:button>");
+        it('squares up on request, for the call site the inference cannot read', function () {
+            // A slot holding nothing but a line break is how anyone who indents
+            // their Blade writes an icon button, and it is the one shape the
+            // component cannot work out for itself: folding synthesises a slot
+            // placeholder for whitespace-only content, so the same tag reads as
+            // labelled when it folds and unlabelled when it does not. `square`
+            // settles it, and this is the call site it exists for.
+            expect(Blade::render("<shape:button icon=\"check\" square>\n    \n</shape:button>"))
+                ->toContain(' p-2 ')
+                ->not->toContain('px-4');
+        });
 
-            expect($html)->toContain('p-2');
+        it('squares up on request whether or not the call site folds', function () {
+            // The point of the prop over the inference: a dynamic prop is enough to
+            // decline the fold, and the shape of the button must not turn on that.
+            $folded = Blade::render('<shape:button icon="check" square />');
+            $unfolded = Blade::render('<shape:button icon="check" square :variant="$variant" />', ['variant' => 'outline']);
+
+            expect($folded)->toContain(' p-2 ');
+            expect($unfolded)->toContain(' p-2 ');
+        });
+
+        it('takes a label back when square is refused', function () {
+            // The prop overrides the inference in both directions, so a stringified
+            // false from a template reads as a plain button rather than as the mere
+            // presence of an attribute.
+            expect(Blade::render('<shape:button icon="check" square="false" />'))
+                ->toContain('px-4 py-2')
+                ->not->toContain(' p-2 ');
+        });
+
+        it('does not leak the square prop onto the rendered element', function () {
+            expect(Blade::render('<shape:button icon="check" square />'))
+                ->not->toContain('square');
         });
 
         it('keeps the padded scale as soon as there is a label to pad', function () {

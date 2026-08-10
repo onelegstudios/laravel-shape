@@ -514,3 +514,70 @@ describe('error', function () {
         expect(Blade::render('<shape:error name="email" />'))->toContain('<svg');
     });
 });
+
+describe('the aware boundary', function () {
+    // Blaze compiles `@aware` differently from Blade, and this family is on Blaze.
+    // Two differences matter, and both are invisible in the markup: the value each
+    // implementation hands back, and what each leaves on `$attributes`.
+    //
+    // The value turns out to agree. Blade's `getConsumableComponentData()` checks
+    // the component's own data before walking ancestors, and Blaze only walks
+    // ancestors -- but its compiler pushes the call site's own attributes onto that
+    // stack before the child runs, so the component's own value is on top either
+    // way. The cases above cover that for `for` and `name`.
+    //
+    // What does not agree is the bag. Blaze's AwareCompiler unsets each consumed
+    // key from `$attributes`; Blade's leaves it there. Every file in this family
+    // saves the bag and puts it back around the directive, and these are the two
+    // reads that break the moment somebody takes that out.
+
+    it('reads the error bag under a name written on the message rather than the field', function () {
+        // The precedence case above proves the *id* comes from the nearer name. This
+        // one proves the lookup does too, which the slot spelling cannot show: an
+        // error given slot content renders that content whatever name it resolved.
+        seedErrors([
+            'outer' => ['The outer one.'],
+            'inner' => ['The inner one.'],
+        ]);
+
+        $html = Blade::render(<<<'BLADE'
+            <shape:field name="outer">
+                <shape:error name="inner" />
+            </shape:field>
+        BLADE);
+
+        expect($html)
+            ->toContain('The inner one.')
+            ->not->toContain('The outer one.');
+    });
+
+    it('tells a name written on a control from one it inherited', function () {
+        // `Control::resolve()` draws that line by asking whether the bag still
+        // carries the name, and it is what decides whether a standalone control
+        // prints its own message or leaves it to an enclosing field. Under Blaze the
+        // key is gone from the bag by the time it looks, unless it was put back --
+        // and every named control then reads as inherited, silently.
+        seedErrors(['terms' => ['You must accept the terms.']]);
+
+        $standalone = Blade::render('<shape:checkbox label="I agree" name="terms" value="1" />');
+
+        $enclosed = Blade::render(<<<'BLADE'
+            <shape:field name="terms" legend="Terms">
+                <shape:checkbox label="I agree" value="1" />
+            </shape:field>
+        BLADE);
+
+        expect($standalone)->toContain('You must accept the terms.');
+
+        // Once, from the field, rather than once from the field and once per box.
+        expect(substr_count($enclosed, 'You must accept the terms.'))->toBe(1);
+    });
+
+    it('keeps a consumed key on the element when the element is the whole component', function () {
+        // The hidden input echoes the bag whole -- there is no box to draw and no
+        // label to point at -- so a `name` consumed by `@aware` and not put back
+        // would leave the form submitting nothing at all.
+        expect(Blade::render('<shape:input type="hidden" name="token" value="abc" />'))
+            ->toContain('name="token"');
+    });
+});

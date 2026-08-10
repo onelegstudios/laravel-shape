@@ -1,6 +1,9 @@
-{{-- No `@blaze`: see the note at the top of field.blade.php. Every component in
-     this family stays on Blade's own pipeline so that `@aware` resolves the same
-     way on both sides of the boundary. --}}
+@blaze
+
+{{-- `@blaze`: see the note at the top of field.blade.php. Every component in this
+     family is on it, so that `@aware` resolves the same way on both sides of the
+     boundary. The bag is saved and restored around `@aware` because the `for` read
+     below is a read of the caller's own value -- input.blade.php has the reason. --}}
 
 @props(['size' => null])
 
@@ -8,10 +11,18 @@
      unsetting every variable whose name matches an attribute it did not claim,
      and neither of these is a prop here. --}}
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware([
     'name' => null,
     'for' => null,
 ])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     // The label's own `for` wins, then the field's, then the field's name.

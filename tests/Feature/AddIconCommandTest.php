@@ -48,7 +48,7 @@ it('resolves a name through the alias table but keeps Shape\'s own name on the f
     publishIcon(['name' => ['close']])->assertSuccessful();
 
     expect(File::exists($this->iconPath.'/lucide/close.blade.php'))->toBeTrue()
-        ->and(File::get($this->iconPath.'/lucide/close.blade.php'))->toContain('lucide-x');
+        ->and(File::get($this->iconPath.'/lucide/art/close.blade.php'))->toContain('lucide-x');
 });
 
 it('publishes the alias the package ships', function () {
@@ -57,7 +57,7 @@ it('publishes the alias the package ships', function () {
     // set actually holds, or the state fails the first time it is rendered.
     publishIcon(['name' => ['spinner']])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/spinner.blade.php'))->toContain('lucide-loader-circle');
+    expect(File::get($this->iconPath.'/lucide/art/spinner.blade.php'))->toContain('lucide-loader-circle');
 });
 
 it('spells a shipped alias the way the set being published spells it', function () {
@@ -67,8 +67,8 @@ it('spells a shipped alias the way the set being published spells it', function 
     publishIcon(['name' => ['spinner']])->assertSuccessful();
     publishIcon(['name' => ['spinner'], '--set' => 'outline'])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/spinner.blade.php'))->toContain('lucide-loader-circle')
-        ->and(File::get($this->iconPath.'/outline/spinner.blade.php'))->toContain('heroicon-o-arrow-path');
+    expect(File::get($this->iconPath.'/lucide/art/spinner.blade.php'))->toContain('lucide-loader-circle')
+        ->and(File::get($this->iconPath.'/outline/art/spinner.blade.php'))->toContain('heroicon-o-arrow-path');
 });
 
 it('resolves a set name the packaged table knows without config listing it', function () {
@@ -77,7 +77,7 @@ it('resolves a set name the packaged table knows without config listing it', fun
     // without editing a config file first.
     publishIcon(['name' => ['check'], '--set' => 'solid'])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/solid/check.blade.php'))->toContain('heroicon-s-check');
+    expect(File::get($this->iconPath.'/solid/art/check.blade.php'))->toContain('heroicon-s-check');
 });
 
 it('lets config repoint a name the packaged table already spells', function () {
@@ -87,7 +87,7 @@ it('lets config repoint a name the packaged table already spells', function () {
 
     publishIcon(['name' => ['spinner'], '--set' => 'outline'])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/outline/spinner.blade.php'))
+    expect(File::get($this->iconPath.'/outline/art/spinner.blade.php'))
         ->toContain('heroicon-o-arrow-path-rounded-square');
 });
 
@@ -96,7 +96,7 @@ it('records a stamp in the file it writes', function () {
     // moved. A published file with no stamp can only be compared on its artwork.
     publishIcon(['name' => ['check']])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/check.blade.php'))->toMatch('/\n\s*stamp:[0-9a-f]{16} --\}\}\n/');
+    expect(File::get($this->iconPath.'/lucide/art/check.blade.php'))->toMatch('/\n\s*stamp:[0-9a-f]{16} --\}\}\n/');
 });
 
 it('keeps same-named icons from two sets apart', function () {
@@ -106,8 +106,8 @@ it('keeps same-named icons from two sets apart', function () {
     publishIcon(['name' => ['check']])->assertSuccessful();
     publishIcon(['name' => ['check'], '--set' => 'fixture'])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/check.blade.php'))->not->toContain('data-fixture')
-        ->and(File::get($this->iconPath.'/fixture/check.blade.php'))->toContain('data-fixture');
+    expect(File::get($this->iconPath.'/lucide/art/check.blade.php'))->not->toContain('data-fixture')
+        ->and(File::get($this->iconPath.'/fixture/art/check.blade.php'))->toContain('data-fixture');
 });
 
 it('writes a default forward only for the configured default set', function () {
@@ -143,7 +143,7 @@ it('adds the icons that are missing and warns about the ones that are not', func
 
     publishIcon(['name' => ['check', 'x']])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/x.blade.php'))->toContain('<svg');
+    expect(File::get($this->iconPath.'/lucide/art/x.blade.php'))->toContain('<svg');
 });
 
 it('fails naming the prefix it tried when the icon does not exist', function () {
@@ -234,7 +234,7 @@ it('offers Shape\'s own names as well as the set\'s', function () {
         ->expectsQuestion('Which icon?', '')
         ->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/close.blade.php'))->toContain('lucide-x');
+    expect(File::get($this->iconPath.'/lucide/art/close.blade.php'))->toContain('lucide-x');
 });
 
 it('publishes every icon in a set with --all', function () {

@@ -1,7 +1,8 @@
-{{-- No `@blaze`, for the reason field.blade.php spells out: this component renders
-     that one, and a family split across two `@aware` implementations reads two
-     different names. It would not have folded regardless -- the `config()` read
-     below is the same thing that disqualifies the button. --}}
+@blaze
+
+{{-- `@blaze` with the rest of the family: they move as a unit so no `@aware`
+     boundary is ever mixed, and the bag is saved and restored around `@aware` for
+     the reason input.blade.php spells out. See the top of field.blade.php. --}}
 
 @props([
     'label' => null,
@@ -15,7 +16,15 @@
      control is already a mark. A swatch with a glyph beside it inside the same box
      would be two things claiming to say what the field holds. --}}
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['name' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     $defaults = array_filter((array) config('shape.components.color'), 'is_string');

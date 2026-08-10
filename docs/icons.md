@@ -367,14 +367,34 @@ Icons are published into a directory per set:
 ```
 resources/views/vendor/shape-icons/
     default/
-        check.blade.php
+        check.blade.php          forwards to the configured default set
         close.blade.php
+        art/
+            check.blade.php      forwards to the same set's artwork
+            close.blade.php
     lucide/
-        check.blade.php
+        check.blade.php          the component a call site addresses
         close.blade.php
+        art/
+            check.blade.php      the SVG itself
+            close.blade.php
     solid/
         check.blade.php
+        art/
+            check.blade.php
 ```
+
+Two files per icon, and the split is not filing. `<shape:icon>` reaches artwork with `@include`
+rather than by resolving a component, because an include is what a *dynamic* icon can afford —
+a `:name` bound to a variable, or a mark a component sizes from one, cannot fold and would
+otherwise pay a component resolution on every render. An include cannot end at a file carrying
+`@blaze`, though: Blaze compiles one into a function definition, so including it renders nothing
+at all. So the artwork is a plain view that anything may include, and the component beside it is
+the half that folds.
+
+Writing `<x-shape-icon::lucide.check />` by hand still resolves to the component and still folds
+away to the SVG — folding evaluates the include at compile time, so the pair collapses to one
+inline `<svg>` exactly as a single file did.
 
 A directory per set, rather than one flat pile, because two sets sharing a name is the normal
 case and not an edge one: Heroicons outline and solid have the same names for nearly every

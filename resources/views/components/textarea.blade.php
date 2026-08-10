@@ -1,7 +1,8 @@
-{{-- No `@blaze`, for the reason field.blade.php spells out: this component
-     renders that one, and a family split across two `@aware` implementations
-     reads two different names. It would not have folded regardless -- the
-     `config()` read below is the same thing that disqualifies the button. --}}
+@blaze
+
+{{-- `@blaze` with the rest of the family: they move as a unit so no `@aware`
+     boundary is ever mixed, and the bag is saved and restored around `@aware` for
+     the reason input.blade.php spells out. See the top of field.blade.php. --}}
 
 @props([
     'label' => null,
@@ -17,7 +18,15 @@
      a prop, and `name` is deliberately not a prop here. See input.blade.php for
      why that order settles nothing about precedence on its own. --}}
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['name' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     // Same floor-plus-config idiom as the input, for the same reason: config is

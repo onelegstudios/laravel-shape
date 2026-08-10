@@ -74,14 +74,15 @@ Add this to CI. It is the only way to catch an upgrade that starts drawing a new
 Two syntaxes, same components: `<shape:button>` and `<x-shape::button>`.
 
 **Button** — `variant` (`solid`/`soft`/`ghost`/`outline`), `color` (any theme role), `size`
-(`xs`/`sm`/`md`/`lg`), `loading`, `icon`, `icon-trailing`, `icon-set`:
+(`xs`/`sm`/`md`/`lg`), `loading`, `icon`, `icon-trailing`, `icon-set`, `square`:
 
 ```blade
 <shape:button variant="solid" color="primary" type="submit" :loading="$saving">Save</shape:button>
 <shape:button icon="trash-2" color="danger" aria-label="Delete" />
 ```
 
-An icon-only button needs an `aria-label`; Shape will not invent one.
+An icon-only button needs an `aria-label`; Shape will not invent one. Its square padding is
+inferred from an empty slot — add `square` when the tag is written across two lines.
 
 **Form controls** — `input`, `select`, `textarea`, `checkbox`, `radio`, `switch`, `file`, `range`,
 `color`. All take `size`, `invalid`, and the `label`/`description`/`description-trailing` shorthand

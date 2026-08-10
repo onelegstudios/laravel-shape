@@ -1,13 +1,25 @@
-{{-- No `@blaze`, and this file has its own reason rather than field.blade.php's.
+@blaze
+
+{{-- `@blaze` with the family, and this file had its own reason to doubt it rather
+     than field.blade.php's.
 
      The input renders this component itself for the `prefix` prop, from inside its
      own template -- and at the top level of a page that is a component whose stack
      has already been popped. Blade copes because
      `ManagesComponents::getConsumableComponentData()` checks `currentComponentData`
-     before it walks the ancestors, and the input's data is sitting there.
-     `BlazeRuntime::getConsumableData` only walks the ancestors. So a Blaze-compiled
-     affix would find nothing on that path and quietly render every prefix at the
-     configured default size rather than the field's own. --}}
+     before it walks the ancestors, where `BlazeRuntime::getConsumableData` only
+     walks ancestors; the worry was that a Blaze-compiled affix would find nothing
+     on that path and quietly render every prefix at the configured default size.
+
+     It does not arise, and for two reasons stacked. The prop path never needed the
+     stack at all -- the input passes `:size` and `:affix` already resolved, which
+     is a decision made further down this file for its own reasons. And on the
+     nested path Blaze's compiler emits `$__blaze->pushData($attrs)` at the call
+     site, so the affix's own attributes are on top of that stack before it runs.
+     `tests/Feature/InputComponentTest` pins both directions.
+
+     The bag is saved and restored around `@aware` below, because the reads that
+     follow are reads of the caller's own value; input.blade.php has the reason. --}}
 
 {{-- No `@props` for either of these, which is the decision rather than an omission.
      `@aware` assigns unconditionally, so a prop of the same name would let the
@@ -19,7 +31,15 @@
      resolved, because the input has already read config and floored an unknown rung;
      a nested call site inherits them from the field it is standing in. --}}
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['size' => null, 'affix' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     // Own attribute first, then what the input around it said, then config. The bag

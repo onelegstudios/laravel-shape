@@ -52,9 +52,43 @@ trait WritesIconComponents
     private const string STAMP_PATTERN = '/^([ \t]*stamp:)([0-9a-f]{16})([ \t]+--\}\}[ \t\r]*)$/m';
 
     /**
-     * Wrap raw SVG markup in a component that takes the caller's attributes.
+     * The component a call site addresses, which holds no artwork of its own.
+     *
+     * Two files rather than one, and the split is not tidiness. `<shape:icon>`
+     * reaches its artwork with `@include`, because dispatching through
+     * <x-dynamic-component> costs a component resolution on every render that
+     * cannot fold -- which is every icon whose name is only known at render, and
+     * every mark a component sizes from a variable. An include cannot end at a
+     * file carrying `@blaze`, though: Blaze compiles one into a function
+     * definition, so including it renders nothing at all.
+     *
+     * So the artwork is a plain view that anything may include, and this is the
+     * component that folds. Writing `<x-shape-icon::lucide.check />` by hand still
+     * resolves here and still folds away to the SVG, because folding evaluates the
+     * include at compile time.
+     *
+     * The view name is passed in rather than built here: where a published icon
+     * lives is a fact about the published directory, and that lives next door in
+     * InteractsWithPublishedIcons with the rest of them. Nothing in this trait
+     * touches a path.
      */
-    private function component(string $contents, string $icon, string $set): string
+    private function component(string $view, string $set, string $name): string
+    {
+        return <<<BLADE
+            @blaze(fold: true)
+
+            {{-- The component form of "{$set}/{$name}". The artwork is beside it in
+                 art/, which is what `<shape:icon>` includes directly. --}}
+
+            @include('{$view}')
+
+            BLADE;
+    }
+
+    /**
+     * Wrap raw SVG markup in the artwork view the component includes.
+     */
+    private function art(string $contents, string $icon, string $set): string
     {
         // `shrink-0` and nothing else. An icon is a fixed glyph beside text that
         // wraps, and flex will happily squash it into an ellipse to make room --
@@ -83,9 +117,13 @@ trait WritesIconComponents
      */
     private function body(string $svg, string $icon, string $set, string $stamp): string
     {
+        // No `@blaze` here, and its absence is the whole reason this file exists
+        // apart from the component. Blaze compiles a file carrying that directive
+        // into a function definition, so an `@include` of one renders nothing --
+        // silently, which is the worst way for it to be wrong. The component
+        // beside this carries the directive and folds; this stays a plain view
+        // that anything can include.
         return <<<BLADE
-            @blaze(fold: true)
-
             {{-- {$icon} -- published from set "{$set}" by Shape's icon commands.
                  Adding again leaves this file alone; `shape:icon:update` rewrites it.
                  stamp:{$stamp} --}}
@@ -98,16 +136,36 @@ trait WritesIconComponents
     /**
      * Build the default-set component that forwards to the real one.
      *
-     * No stamp: it holds no artwork, so there is nothing about it a set upgrade
-     * can move. Whether it is right is decided by reading it, and one line is
-     * short enough to read.
+     * No stamp on either forward: they hold no artwork, so there is nothing about
+     * them a set upgrade can move. Whether one is right is decided by reading it,
+     * and one line is short enough to read.
      */
-    private function forward(string $set, string $name): string
+    private function forward(string $view): string
+    {
+        return <<<BLADE
+            @blaze(fold: true)
+
+            {{-- Forwards to the configured default set. Written by Shape's icon commands. --}}
+
+            @include('{$view}')
+
+            BLADE;
+    }
+
+    /**
+     * The artwork half of the default-set forward.
+     *
+     * `<shape:icon>` includes `{set}.art.{name}` without knowing which set is
+     * configured -- `default` is a real directory precisely so it does not have to
+     * -- so `default/art/` has to answer too, and it answers by forwarding to the
+     * same file the component above does.
+     */
+    private function forwardArt(string $view): string
     {
         return <<<BLADE
             {{-- Forwards to the configured default set. Written by Shape's icon commands. --}}
 
-            <x-shape-icon::{$set}.{$name} {{ \$attributes }} />
+            @include('{$view}')
 
             BLADE;
     }

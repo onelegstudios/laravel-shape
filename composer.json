@@ -85,6 +85,9 @@
         "bench": [
             "@php benchmarks/blaze.php"
         ],
+        "bench:pages": [
+            "@php benchmarks/pages.php"
+        ],
         "test": [
             "@analyse",
             "@lint:check",

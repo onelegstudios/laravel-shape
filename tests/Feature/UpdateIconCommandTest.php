@@ -59,7 +59,7 @@ it('rewrites the file from what the name resolves to now', function () {
 
     seedIcon(['name' => ['mark']])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/fixture/mark.blade.php'))->toContain('data-fixture="check"');
+    expect(File::get($this->iconPath.'/fixture/art/mark.blade.php'))->toContain('data-fixture="check"');
 
     config()->set('shape.icons.aliases', ['mark' => 'cross']);
 
@@ -67,7 +67,7 @@ it('rewrites the file from what the name resolves to now', function () {
         ->expectsOutputToContain('updated')
         ->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/fixture/mark.blade.php'))
+    expect(File::get($this->iconPath.'/fixture/art/mark.blade.php'))
         ->toContain('data-fixture="cross"')
         ->not->toContain('data-fixture="check"');
 });
@@ -80,13 +80,13 @@ it('records a stamp for the artwork it just wrote', function () {
 
     seedIcon(['name' => ['mark']])->assertSuccessful();
 
-    $before = File::get($this->iconPath.'/fixture/mark.blade.php');
+    $before = File::get($this->iconPath.'/fixture/art/mark.blade.php');
 
     config()->set('shape.icons.aliases', ['mark' => 'cross']);
 
     updateIcon(['name' => ['mark']])->assertSuccessful();
 
-    $after = File::get($this->iconPath.'/fixture/mark.blade.php');
+    $after = File::get($this->iconPath.'/fixture/art/mark.blade.php');
 
     expect($after)->toMatch('/\n\s*stamp:[0-9a-f]{16} --\}\}\n/')
         ->and($after)->not->toBe($before);
@@ -118,7 +118,7 @@ it('picks up a set whose prefix now points at another library', function () {
 
     updateIcon(['name' => ['check']])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/check.blade.php'))->toContain('data-fixture="check"');
+    expect(File::get($this->iconPath.'/lucide/art/check.blade.php'))->toContain('data-fixture="check"');
 });
 
 it('refreshes a set against the names its own library uses', function () {
@@ -131,7 +131,7 @@ it('refreshes a set against the names its own library uses', function () {
         ->doesntExpectOutputToContain('missing from set')
         ->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/outline/spinner.blade.php'))->toContain('heroicon-o-arrow-path');
+    expect(File::get($this->iconPath.'/outline/art/spinner.blade.php'))->toContain('heroicon-o-arrow-path');
 });
 
 it('overwrites a hand-edited file, because that is the whole verb', function () {
@@ -143,7 +143,7 @@ it('overwrites a hand-edited file, because that is the whole verb', function () 
         ->expectsOutputToContain('updated')
         ->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/check.blade.php'))
+    expect(File::get($this->iconPath.'/lucide/art/check.blade.php'))
         ->toContain('<svg')
         ->not->toContain('EDITED');
 });
@@ -184,7 +184,7 @@ it('reports an icon the set no longer has and updates the rest', function () {
         ->expectsOutputToContain('missing from set')
         ->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/fixture/mark.blade.php'))->toContain('data-fixture="cross"');
+    expect(File::get($this->iconPath.'/fixture/art/mark.blade.php'))->toContain('data-fixture="cross"');
 });
 
 it('names the icon the set could not resolve and leaves the file as it was', function () {
@@ -192,7 +192,7 @@ it('names the icon the set could not resolve and leaves the file as it was', fun
 
     seedIcon(['name' => ['other']])->assertSuccessful();
 
-    $before = File::get($this->iconPath.'/fixture/other.blade.php');
+    $before = File::get($this->iconPath.'/fixture/art/other.blade.php');
 
     config()->set('shape.icons.aliases', ['other' => 'gone']);
 
@@ -204,7 +204,7 @@ it('names the icon the set could not resolve and leaves the file as it was', fun
         ->expectsOutputToContain('fixture-gone')
         ->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/fixture/other.blade.php'))->toBe($before);
+    expect(File::get($this->iconPath.'/fixture/art/other.blade.php'))->toBe($before);
 });
 
 it('reports a name that was never published and carries on', function () {
@@ -257,7 +257,7 @@ it('writes a missing default forward for the configured default set', function (
         ->expectsOutputToContain('updated')
         ->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/default/check.blade.php'))->toContain('lucide.check');
+    expect(File::get($this->iconPath.'/default/check.blade.php'))->toContain('lucide.art.check');
 });
 
 it('repoints a default forward that names another set', function () {
@@ -272,7 +272,7 @@ it('repoints a default forward that names another set', function () {
 
     updateIcon(['name' => ['check']])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/default/check.blade.php'))->toContain('lucide.check');
+    expect(File::get($this->iconPath.'/default/check.blade.php'))->toContain('lucide.art.check');
 });
 
 it('leaves the default directory alone when the set is not the default', function () {
@@ -361,8 +361,8 @@ it('updates every published icon in the set with --all', function () {
 
     updateIcon(['--all' => true, '--force' => true])->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/fixture/mark.blade.php'))->toContain('data-fixture="cross"')
-        ->and(File::get($this->iconPath.'/fixture/other.blade.php'))->toContain('data-fixture="cross"');
+    expect(File::get($this->iconPath.'/fixture/art/mark.blade.php'))->toContain('data-fixture="cross"')
+        ->and(File::get($this->iconPath.'/fixture/art/other.blade.php'))->toContain('data-fixture="cross"');
 });
 
 it('asks before rewriting the whole set', function () {
@@ -387,7 +387,7 @@ it('rewrites the set once the confirmation is answered', function () {
         ->expectsConfirmation('Update all 2 published icon(s) in set [lucide]?', 'yes')
         ->assertSuccessful();
 
-    expect(File::get($this->iconPath.'/lucide/check.blade.php'))->toContain('<svg');
+    expect(File::get($this->iconPath.'/lucide/art/check.blade.php'))->toContain('<svg');
 });
 
 it('fails rather than let an unanswerable confirmation stand in for --force', function () {

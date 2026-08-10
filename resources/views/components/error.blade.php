@@ -1,6 +1,18 @@
-{{-- No `@blaze`: see the note at the top of field.blade.php. --}}
+@blaze
+
+{{-- `@blaze`: see the note at the top of field.blade.php. The bag is saved and
+     restored around `@aware` because the `name` read below is a read of the
+     caller's own value -- input.blade.php has the reason. --}}
+
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
 
 @aware(['name' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     // A name written on this tag wins over the field's, for the reason spelled out

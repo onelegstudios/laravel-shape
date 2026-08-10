@@ -20,71 +20,98 @@ no component behind at all, just the `<svg>` inline in the compiled view. That i
 the component reads nothing global — its set and alias table were resolved when the icon was
 [published](icons.md#adding-icons), so there is no `config()` call left to freeze. A
 dynamic `:name` cannot be resolved at compile time and falls back to the function compiler,
-which still skips Blade's component pipeline — but it is a much smaller win than folding, not
-a near-equal one. A folded icon costs almost nothing; a dynamic one is resolved through
-`<x-dynamic-component>` on every render, and in a rough measure of 2,000 icons that was the
-difference between about 11ms and about 860ms.
+which still skips Blade's component pipeline. That path used to be far more expensive than the
+folded one: the icon dispatched through `<x-dynamic-component>`, which resolved a component per
+render, and the published default-set forward resolved a second one behind it. It reaches its
+artwork with `@include` now, which is a view render rather than two component resolutions — on
+an index page of 40 rows, where every checkbox sizes its two marks from a variable and so cannot
+fold, that alone was the difference between about 13ms and about 7ms per render.
 
-**That is what the button's `icon` prop pays.** `icon="check"` is a literal where you write it,
-but the name crosses a component boundary and is a variable by the time the icon sees it, so it
-cannot fold. A button with the prop costs roughly nine times a plain button; the same button
-with the icon written into the slot costs a few percent, because there the icon is compiled in
-your template and folds as usual:
+Folding is still much cheaper than not folding. The gap is now worth a sentence rather than a
+warning.
+
+The [button](components/button.md) folds too, and folding it collapses the `icon` prop as a side
+effect. The name used to cross a component boundary — a literal where you wrote it, a variable
+by the time the icon saw it — so the icon fell back to `<x-dynamic-component>` and a button with
+the prop cost roughly nine times a plain one. Folding the button removes the boundary: the icon
+is resolved in the same compile pass, so both of these now cost the same nothing.
 
 ```blade
-{{-- Folds. --}}
 <shape:button><shape:icon name="check" size="md" />Save</shape:button>
-
-{{-- Shorter, and does not fold. --}}
 <shape:button icon="check">Save</shape:button>
 ```
 
-Write whichever you like — on a page with a handful of buttons the difference is not worth
-thinking about, and the prop is the one that cannot get the icon's size out of step with the
-button's. On a page rendering hundreds of them in a loop, reach for the slot. The `loading`
-state resolves its spinner the same way, so a busy button carries the same cost — and there the
-slot is not an escape, because the spinner is Shape's to draw rather than yours.
+Prefer the prop. It is shorter, and it is the one that cannot get the icon's size out of step
+with the button's.
+
+The `loading` state is the exception. Its spinner carries a translated accessible name, and a
+translation resolved at compile time would serve one locale to everybody — so that overlay is
+held back to render time and its spinner does not fold. It only exists while the button is busy,
+and the usual `:loading="$saving"` is a dynamic prop that declines to fold anyway.
+
+## The config file is read when a view is compiled
+
+This is the one thing folding the button changed about how it behaves, and it is worth being
+plain about.
+
+The button's `variant`, `color` and `size` defaults come from `config('shape')`, and a folded
+component is evaluated once — when the template calling it is compiled. So those defaults are
+baked into the compiled view.
+
+Editing `config/shape.php` still works. Shape records the config file as a dependency of every
+view it folded into, and Blaze recompiles a view whose dependencies are newer than its compile,
+checked on every render — so it holds under `view:cache` as well.
+
+What no longer reaches the button is a default set at **runtime**:
+
+```php
+// Was honoured before; is not now.
+Config::set('shape.components.button.variant', 'solid');
+```
+
+Per-tenant or per-request styling defaults are the same story — whichever request compiles the
+view first decides what every later one gets. If you need defaults that vary at runtime, pass
+them at the call site rather than through config.
+
+`memo`, Blaze's third strategy, is unused: it keys on the call site alone and only covers
+components without slots, which a button is not.
 
 ## What does not fold, and why
 
-The [button](components/button.md) does not fold, and shouldn't: it reads its `variant`, `color`,
-and `size` defaults from `config('shape')` on every render. Folding would bake whatever those were
-when the view was first compiled, so two identical tags either side of a config change would share
-one result — which is the promise the config file exists to make.
+**The field components do not fold**, and the reason is a counter rather than config. Every
+control (the input, select, textarea, checkbox, radio and file input), along with the
+[field](components/field.md), the label, the description and the error, is compiled by Blaze
+— but with `@blaze` alone. Folding would bake the sequence Shape uses to invent an id for a
+field nobody named, so a loop of unnamed fields would emit the same id and the same `for` for
+every row.
 
-`memo`, Blaze's third strategy, is unused for the same reason: it keys on the call site alone,
-so it cannot see a config change either.
+These components share a field name through `@aware`, and the two pipelines compile that
+directive differently: Blaze walks only a component's ancestors where Blade checks the
+component's own data first, and Blaze strips the consumed key from the attribute bag where
+Blade leaves it. Neither difference is visible from a call site — the components move onto
+Blaze as one family so no `@aware` boundary is ever mixed, and each of them saves the attribute
+bag and puts it back around the directive. But it is why the family moves together, and why
+adding `@blaze` to one of them on its own is not a safe edit.
 
-**The field components opt out of Blaze entirely** — every control (the input, select, textarea,
-checkbox, radio and file input) along with the [field](components/field.md), the label, the
-description and the error all
-stay on Blade's own pipeline. They share a field name through
-`@aware`, and Blaze compiles that directive against a data stack of its own that does not agree
-with Blade's: it walks only a component's ancestors where Blade checks the component's own data
-first, and it strips the key from the attribute bag on the way past. A field compiled by one
-and a label by the other would wire themselves to different names, which is the single thing
-these components exist to get right. Blaze declines to fold an `@aware` component regardless,
-so the strategy that would have paid best was never available to them.
-
-That costs a form the difference between one pipeline and the other, on a component you
-render a handful of times per page rather than hundreds. If you are rendering hundreds of
-fields in a loop, the shorthand is the thing to drop first — it is five components where the
-bare `<shape:input>` is two.
+If you are rendering hundreds of fields in a loop, the shorthand is still the thing to drop
+first — it is five components where the bare `<shape:input>` is two.
 
 Nothing stops you enabling either for your own components, and Blaze can be turned off entirely
 with `BLAZE_ENABLED=false` if you want to compare.
 
 ## The benchmark
 
-The repository carries a benchmark that measures all three strategies against the gallery's own
+The repository carries a benchmark that measures the strategies against the gallery's own
 component markup, on a page compiled once and rendered many times:
 
 ```bash
 composer bench -- --repeat=10 --renders=60
 ```
 
-It compares four strategies: Blade's own pipeline, an icon resolved at render time
-rather than published, the components as shipped, and a foldable button.
+It compares three: Blade's own pipeline, an icon resolved at render time rather than published,
+and the components as shipped. On a page of 1,140 components the shipped pipeline renders in
+about a sixth of the time Blade's does, and every mode's HTML is checked byte for byte against
+the others — a component that quietly declines to fold cannot be reported as a win.
 
 ---
 

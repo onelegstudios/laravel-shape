@@ -1,4 +1,6 @@
-{{-- No `@blaze`, for the family's reason: see the top of header.blade.php. --}}
+@blaze
+
+{{-- `@blaze`, for the family's reason: see the top of header.blade.php. --}}
 
 {{-- `href` is a prop here and is not one on `header.item`, which looks like an
      inconsistency and is not. This component switches element on it -- a wordmark

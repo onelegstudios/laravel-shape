@@ -1,7 +1,8 @@
-{{-- No `@blaze`, for the reason field.blade.php spells out: this component
-     renders that one, and a family split across two `@aware` implementations
-     reads two different names. It would not have folded regardless -- the
-     `config()` read below is the same thing that disqualifies the button. --}}
+@blaze
+
+{{-- `@blaze` with the rest of the family: they move as a unit so no `@aware`
+     boundary is ever mixed, and the bag is saved and restored around `@aware` for
+     the reason input.blade.php spells out. See the top of field.blade.php. --}}
 
 @props([
     'label' => null,
@@ -17,7 +18,15 @@
      underneath, this is still `<input type="checkbox">`, because there is no other
      element that carries a boolean into a form. --}}
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['name' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     $defaults = array_filter((array) config('shape.components.switch'), 'is_string');
@@ -137,8 +146,11 @@
                  `<shape:field>` leaves the sentence to it.
 
                  `$resolved->inherited` rather than `$name === null`, which is the
-                 obvious test and the wrong one: Blade's `@aware` reads a component's
-                 own data before its ancestors'. See Control::resolve(). --}}
+                 obvious test and the wrong one: `@aware` reads a component's own
+                 data before its ancestors' on both pipelines. What tells the two
+                 apart is whether the bag still carries the name -- the reason it is
+                 restored after `@aware`. See checkbox.blade.php and
+                 Control::resolve(). --}}
             @if (! $resolved->inherited)
                 <x-shape::error :name="$resolved->field" />
             @endif

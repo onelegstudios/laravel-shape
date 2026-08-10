@@ -195,11 +195,18 @@ class CheckIconCommand extends Command
                     continue;
                 }
 
-                $blade = $files->get($path.'/'.$set.'/'.$name.'.blade.php');
+                // The artwork, not the component beside it: the stamp is a hash of
+                // the SVG and lives where the SVG does. An icon published before
+                // the two were split has no art/ file at all, which reads as an
+                // empty body -- unstamped and outdated, which is exactly what it
+                // is and exactly what updating repairs.
+                $art = $this->artPath($path, $set, $name);
+
+                $blade = $files->exists($art) ? $files->get($art) : '';
 
                 ['edited' => $edited, 'outdated' => $outdated, 'stamped' => $stamped] = $this->compare(
                     $blade,
-                    $this->component($contents, $icon, $set),
+                    $this->art($contents, $icon, $set),
                 );
 
                 if (! $stamped) {
@@ -349,9 +356,13 @@ class CheckIconCommand extends Command
      */
     private function forwardIsCurrent(Filesystem $files, string $path, string $set, string $name): bool
     {
-        $target = $path.'/default/'.$name.'.blade.php';
+        $component = $path.'/default/'.$name.'.blade.php';
+        $art = $this->artPath($path, 'default', $name);
 
-        return $files->exists($target) && $files->get($target) === $this->forward($set, $name);
+        return $files->exists($component)
+            && $files->get($component) === $this->forward($this->artView($set, $name))
+            && $files->exists($art)
+            && $files->get($art) === $this->forwardArt($this->artView($set, $name));
     }
 
     /**

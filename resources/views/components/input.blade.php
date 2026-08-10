@@ -1,7 +1,9 @@
-{{-- No `@blaze`, for the reason field.blade.php spells out: this component renders
-     that one, and a family split across two `@aware` implementations reads two
-     different names. It would not have folded regardless -- the `config()` read
-     below is the same thing that disqualifies the button. --}}
+@blaze
+
+{{-- `@blaze` with the rest of the family, for the reason field.blade.php spells
+     out: they move as a unit so no `@aware` boundary is ever mixed. No `fold` --
+     the `config()` read below is the same thing that disqualifies the button, and
+     `Control::$sequence` is a second reason on top of it. --}}
 
 @props([
     'label' => null,
@@ -39,7 +41,39 @@
      puts it first, which is what settles the precedence rather than the ordering
      of these two directives. --}}
 
+{{-- The bag, saved and put back around `@aware`, and this file carries the reason
+     for the whole family.
+
+     Blade's `@aware` assigns the variable and leaves `$attributes` alone. Blaze's
+     `AwareCompiler` assigns the variable *and* unsets the key from `$attributes` --
+     tidiness on its part, since a consumed key has no business rendering as a stray
+     attribute, and every file here already does that unsetting by hand further down
+     (`except('name')`, `except('for')`, `except(['size', 'affix'])`).
+
+     Taking the key away early costs two things this component depends on. `name` has
+     to reach the rendered element for an ordinary HTML form to work, and the hidden
+     branch below echoes the bag whole -- so a `<shape:input type="hidden" name="token">`
+     would submit nothing. And `Control::resolve()` tells a name written on this tag
+     from one inherited off an enclosing field by asking whether the bag still has it;
+     with the key gone every named control reads as inherited, which is what decides
+     whether a standalone checkbox prints its own message.
+
+     Neither shows up as a precedence bug, because `getConsumableData` still returns
+     the right *value* -- the call site pushed these same attributes. What is lost is
+     only the distinction between "written here" and "inherited", and the key itself.
+
+     After `@props` rather than before it: `@props` has already taken the styling
+     props off the bag, and restoring a snapshot from above it would put them back. --}}
+
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['name' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     // Same floor-plus-config idiom as the button, for the same reason: config is

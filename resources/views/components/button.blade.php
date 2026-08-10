@@ -1,16 +1,37 @@
-@blaze
+@blaze(fold: true)
 
-{{-- Blaze compiles this template into a plain PHP function and calls it directly,
-     skipping Blade's component pipeline. That is the whole optimisation here, and
-     it has to be: the two stronger strategies both disqualify themselves. `memo`
-     caches rendered output per call-site signature but only applies to components
-     without slots, and a button is mostly slot. `fold` bakes the result into the
-     calling template at compile time, which cannot survive the `config()` reads
-     below -- an application's published defaults would stop being read the moment
-     a view was compiled, which is the one promise this component makes.
+{{-- Folding is the strongest thing Blaze does: a static call site is evaluated at
+     compile time and its markup written straight into the calling template, so
+     there is no component left at render -- not even the function call the bare
+     directive would leave. It also collapses the `icon` prop, which is otherwise
+     the expensive way to put a mark on a button: the nested icon is resolved here,
+     at compile time, rather than resolved dynamically on every render.
 
-     The directive has to be the first thing in the file: Blaze looks for it with
-     an anchored match, so a comment above it reads as no directive at all. --}}
+     What folding costs is that everything this file reads is read once. Two of
+     those reads had to be dealt with before the directive could go on:
+
+     - `config('shape.components.button')` below is now a *compile-time* input. The
+       published defaults are still honoured -- editing config/shape.php invalidates
+       every view that folded them, which ShapeServiceProvider arranges by stamping
+       the file as a fold dependency -- but a default set at runtime is not.
+       `Config::set(...)` from a service provider, and per-tenant config, no longer
+       reach this component: whoever compiles the view first wins. That is the one
+       promise this component gave up to get here, and docs/performance.md says so
+       in as many words.
+     - `__()` in the loading overlay would bake a locale, which no invalidation can
+       repair. It sits in an island instead; see the comment there.
+
+     `memo`, the remaining strategy, still does not apply: it caches rendered output
+     per call-site signature and only covers components without slots, and a button
+     is mostly slot.
+
+     Two mechanical things about editing a file that folds. The directive has to be
+     the first thing in it: Blaze looks for it with an anchored match, so a comment
+     above it reads as no directive at all. And comments are not inert here --
+     folding pre-processes the raw source before Blade strips them, so a directive
+     name written with its at-sign inside a comment is matched as the real thing.
+     One in this block would pair itself with the island's closing tag below and
+     swallow the component whole. Name directives in prose, as above. --}}
 
 @props([
     'variant' => null,
@@ -20,6 +41,7 @@
     'icon' => null,
     'iconTrailing' => null,
     'iconSet' => 'default',
+    'square' => null,
 ])
 
 @php
@@ -163,19 +185,43 @@
     // named "1". Nothing beyond the type is checked here, because a name with no
     // artwork behind it is the icon component's exception to throw and it already
     // says which component it failed to find.
+    //
+    // One `set` for both icons rather than one each. A single button drawing its two
+    // marks from two different libraries is not a thing anyone wants; a button whose
+    // icons come from a set other than the default is, and that is what this covers.
     $lead = is_string($icon) && $icon !== '' ? $icon : null;
     $trail = is_string($iconTrailing) && $iconTrailing !== '' ? $iconTrailing : null;
     $set = is_string($iconSet) && $iconSet !== '' ? $iconSet : 'default';
 
-    // One `set` for both icons rather than one each. A single button drawing its two
-    // marks from two different libraries is not a thing anyone wants; a button whose
-    // icons come from a set other than the default is, and that is what this covers.
+    // An icon and no label is an icon-only button, which the markup usually says on
+    // its own: a mark, no words, nothing to hold apart. So the shape is inferred,
+    // and `square` is there for the one call site the inference cannot read.
     //
-    // An icon and no label is an icon-only button, which is a shape rather than a
-    // mode: there is no prop for it because the markup already says it. The slot is
-    // trimmed first so that a tag written across three lines counts as empty, which
-    // is how anyone who indents their Blade will write one.
-    $bare = ($lead !== null || $trail !== null) && trim((string) $slot) === '';
+    // That call site is a slot holding nothing but a line break:
+    //
+    //     <shape:button icon="check">
+    //     </shape:button>
+    //
+    // which is how anyone who indents their Blade writes an icon button, and which
+    // the two pipelines genuinely disagree about. Rendered, the slot arrives
+    // trimmed and this reads it as no label. Folded, Blaze synthesises a slot
+    // placeholder for whitespace-only content before the template is evaluated, so
+    // `$slot` is a token standing in for content that has not been restored yet --
+    // not empty, and not something trimming can rescue, because the whitespace is
+    // no longer what is in there. The same tag comes out square through one
+    // pipeline and padded through the other, and which one you get depends on
+    // whether some unrelated prop happened to be dynamic.
+    //
+    // Nothing in a template can close that gap, so this does not pretend to: the
+    // test is the plain one, and `square` is how an indented call site says what it
+    // means. A self-closing tag says it too, and is the shorter answer where there
+    // is nothing to put in the slot anyway.
+    //
+    // Guarded like `loading` is, and for the same reason: a template that
+    // stringified a false should not read as square.
+    $bare = $square !== null
+        ? filter_var($square, FILTER_VALIDATE_BOOLEAN)
+        : (($lead !== null || $trail !== null) && (string) $slot === '');
 
     $scale = $bare ? $squares[$rung] : $sizes[$rung];
 
@@ -228,13 +274,27 @@
 
          `animate-spin` is a plain rotation because the artwork is the consumer's --
          the alias can point at a ring, a dial, or a set Shape has never seen, and
-         continuous rotation is the one motion that suits all of them. The dynamic
-         props decline to fold, which is right: a folded label would freeze the
-         locale into the compiled view the same way folding would freeze this
-         component's config. --}}
+         continuous rotation is the one motion that suits all of them.
+
+         The island below is what makes the rest of this component foldable. `__()`
+         is a per-request read: folding evaluates the template once, at compile
+         time, so a baked label would hand every later request whichever locale
+         happened to compile the view. The island lifts this block out of that --
+         Blaze sets it aside before folding and re-injects it uncompiled, so the
+         translation is looked up on render as it always was. What the block cannot
+         see is the component's own scope, since it is no longer inside the function
+         Blaze wrote; `$scope` is the way across, and `$rung` is the one value it
+         needs.
+
+         The cost is that the icon here is compiled but never folded, because island
+         content skips the folding pass. It was already unfoldable -- a dynamic
+         `:size` and `:label` decline -- so nothing is lost, and it only renders in
+         the busy state either way. --}}
     @if ($busy)
-        <span class="absolute inset-0 grid place-items-center">
-            <x-shape::icon name="spinner" :size="$rung" class="animate-spin" :label="__('shape::messages.button.loading')" />
-        </span>
+        @unblaze(['rung' => $rung])
+            <span class="absolute inset-0 grid place-items-center">
+                <x-shape::icon name="spinner" :size="$scope['rung']" class="animate-spin" :label="__('shape::messages.button.loading')" />
+            </span>
+        @endunblaze
     @endif
 </button>

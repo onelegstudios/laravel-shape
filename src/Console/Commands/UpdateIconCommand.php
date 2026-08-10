@@ -196,8 +196,9 @@ class UpdateIconCommand extends Command
             }
 
             $target = $path.'/'.$set.'/'.$name.'.blade.php';
+            $art = $this->artPath($path, $set, $name);
 
-            $rendered = $this->component($contents, $icon, $set);
+            $rendered = $this->art($contents, $icon, $set);
 
             $wrote = false;
 
@@ -205,8 +206,21 @@ class UpdateIconCommand extends Command
             // mtime, and mtime is what every file watcher, every rsync and every
             // "what did this deploy touch?" reads. A run that changed nothing
             // should leave nothing looking changed.
-            if ($files->get($target) !== $rendered) {
-                $files->put($target, $rendered);
+            if (! $files->exists($art) || $files->get($art) !== $rendered) {
+                $files->ensureDirectoryExists(dirname($art));
+                $files->put($art, $rendered);
+
+                $wrote = true;
+            }
+
+            // The component beside it holds no artwork, so a set upgrade never
+            // moves it -- but it is written the same way, because an icon
+            // published before the artwork was split has the SVG in this file and
+            // nothing else would ever repair it.
+            $component = $this->component($this->artView($set, $name), $set, $name);
+
+            if ($files->get($target) !== $component) {
+                $files->put($target, $component);
 
                 $wrote = true;
             }
@@ -332,17 +346,27 @@ class UpdateIconCommand extends Command
      */
     private function refreshForward(Filesystem $files, string $path, string $set, string $name): bool
     {
-        $target = $path.'/default/'.$name.'.blade.php';
+        $wrote = false;
 
-        $rendered = $this->forward($set, $name);
+        // Both halves, because both are reachable: the component answers
+        // `<x-shape-icon::default.check />` and the artwork answers the `@include`
+        // that `<shape:icon name="check" />` compiles to.
+        $writes = [
+            $path.'/default/'.$name.'.blade.php' => $this->forward($this->artView($set, $name)),
+            $this->artPath($path, 'default', $name) => $this->forwardArt($this->artView($set, $name)),
+        ];
 
-        if ($files->exists($target) && $files->get($target) === $rendered) {
-            return false;
+        foreach ($writes as $target => $rendered) {
+            if ($files->exists($target) && $files->get($target) === $rendered) {
+                continue;
+            }
+
+            $files->ensureDirectoryExists(dirname($target));
+            $files->put($target, $rendered);
+
+            $wrote = true;
         }
 
-        $files->ensureDirectoryExists(dirname($target));
-        $files->put($target, $rendered);
-
-        return true;
+        return $wrote;
     }
 }

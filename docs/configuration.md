@@ -47,15 +47,19 @@ key. That is so an application can put its checkboxes on a different rung from i
 a real thing to want in a dense form, where the boxes read fine small and the fields do not — and
 its settings-page switches on a different rung again.
 
-The icon takes no defaults from here. It renders published components, and folding those away
-at compile time is only safe while the component reads nothing global — a `size` read from
-config would be frozen into every compiled view the first time it rendered. Its size scale lives
-in the component with `md` as a literal default, and a call site that wants another rung names
-it. See [Icons](icons.md).
+The icon takes no defaults from here, because there is no house style to state: an icon's size
+follows whatever component it sits in, and the components that take one hand it down already.
+Its scale lives in the component with `md` as a literal default, and a call site standing on its
+own names the rung it wants. See [Icons](icons.md).
 
 With that, `<shape:button>Save</shape:button>` renders a solid primary button, and a call site
 that names a prop still wins — config moves the starting point rather than taking the choice
 away.
+
+**These defaults are read when a view is compiled, not when it renders.** Editing this file
+works: Shape records it as a dependency of the views that baked it, so they recompile. Setting a
+default at runtime — `Config::set('shape.components.button.variant', …)` from a service provider,
+or per-tenant config — does not. See [Performance](performance.md#the-config-file-is-read-when-a-view-is-compiled).
 
 Laravel merges package config one level deep, which means a published copy of this file
 replaces the `components` block wholesale rather than being topped up key by key. Deleting a

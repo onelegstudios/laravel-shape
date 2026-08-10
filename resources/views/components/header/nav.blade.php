@@ -1,4 +1,10 @@
-{{-- No `@blaze`, for the family's reason: see the top of header.blade.php. --}}
+@blaze
+
+{{-- `@blaze`, for the family's reason: see the top of header.blade.php.
+
+     The `__()` below is evaluated at render time and stays that way, because this
+     is `@blaze` without `fold`. Only folding would freeze a translation into the
+     compiled view. --}}
 
 {{-- No `@props`, because there is nothing here to decide. Everything this component
      has to say it says through `merge`, which is also what leaves `aria-label`

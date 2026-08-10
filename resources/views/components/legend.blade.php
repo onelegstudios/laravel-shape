@@ -1,11 +1,10 @@
-{{-- No `@blaze`, and here alone in this family that is a choice rather than a
-     constraint. The legend has no `@aware` -- a `<legend>` names the fieldset it
-     opens by sitting in it, so there is nothing to inherit and nothing to point
-     at -- which means none of the trouble field.blade.php describes applies here.
+@blaze
 
-     It stays on Blade's pipeline anyway. The field renders this component, the
-     two are read together, and one member of a family compiled differently is a
-     safety argument somebody has to make again every time the field moves. --}}
+{{-- `@blaze`, and here alone in this family it never needed the argument. The
+     legend has no `@aware` -- a `<legend>` names the fieldset it opens by sitting
+     in it, so there is nothing to inherit and nothing to point at -- and so no bag
+     to save and restore either. It moves with the family because the field renders
+     it and the two are read together. See the top of field.blade.php. --}}
 
 @props(['size' => null])
 

@@ -245,7 +245,7 @@ it('publishes the config without asking once the chosen set needs recording', fu
     expect(require $this->config)->toHaveKey('icons.set', 'spare');
 
     expect(File::get(TestCase::iconPath().'/default/check.blade.php'))
-        ->toContain('shape-icon::spare.check');
+        ->toContain('shape-icons::spare.art.check');
 });
 
 it('still asks about the config when the chosen sets are what config already says', function () {
@@ -302,7 +302,7 @@ it('publishes the icons named in the alias table', function () {
     expect(File::exists($path.'/fixture/check.blade.php'))->toBeTrue()
         // Named for what Shape's views ask for, holding what the set calls it.
         ->and(File::exists($path.'/fixture/close.blade.php'))->toBeTrue()
-        ->and(File::get($path.'/fixture/close.blade.php'))->toContain('fixture-cross');
+        ->and(File::get($path.'/fixture/art/close.blade.php'))->toContain('fixture-cross');
 });
 
 it('asks which sets to install, which weights, and which one is the default', function () {
@@ -393,7 +393,7 @@ it('publishes the icons into the default set and no other', function () {
         ->and(File::exists($path.'/fixture/check.blade.php'))->toBeFalse()
         // The forward belongs to the default set alone, which is what
         // <shape:icon name="check" /> resolves through.
-        ->and(File::get($path.'/default/check.blade.php'))->toContain('shape-icon::spare.check');
+        ->and(File::get($path.'/default/check.blade.php'))->toContain('shape-icons::spare.art.check');
 });
 
 it('records the chosen sets in a config file it published itself', function () {
@@ -440,7 +440,7 @@ it('leaves a config it did not publish alone and prints the change', function ()
         // The icons still went in, under the set the run was told to use: the
         // config is where the choice outlives this process, not where it works.
         ->and(File::get(TestCase::iconPath().'/default/check.blade.php'))
-        ->toContain('shape-icon::spare.check');
+        ->toContain('shape-icons::spare.art.check');
 });
 
 it('writes nothing to config when the choice is what config already says', function () {

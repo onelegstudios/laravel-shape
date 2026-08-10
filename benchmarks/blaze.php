@@ -12,25 +12,31 @@ declare(strict_types=1);
 |
 |   php benchmarks/blaze.php [--repeat=N] [--renders=N]
 |
-| Four modes are compared:
+| Three modes are compared:
 |
 |   blade    Blaze disabled entirely -- Blade's own component pipeline.
 |   runtime  Blaze on, but with an icon that resolves rather than publishes:
 |            reading its set, its aliases and its SVG on every render. Those
 |            config reads make it unfoldable, so this is the ceiling the
 |            published icon is measured against.
-|   blaze    Blaze on, components as the package ships them. The icon is
-|            published and folds; the button still reads config and does not.
-|   fold     As shipped, plus a generated foldable button whose config-driven
-|            defaults are resolved into literal @props defaults -- what is left
-|            on the table by the button's runtime config.
+|   blaze    Blaze on, components as the package ships them: the icon and the
+|            button fold, the field and header families are compiled.
+|
+| There used to be a fourth, `fold`, which generated a foldable button by
+| rewriting its config reads into literal @props defaults -- the button folds as
+| shipped now, so the mode measured the package against itself. What is left on
+| the table has moved to the field family, and measuring that needs the folded
+| family to exist first; it does not, because folding it bakes the counter that
+| invents an id for an unnamed field. See docs/performance.md.
 |
 | Method notes, because they decide whether the numbers mean anything:
 |
 |   - Each mode runs in its own process. Blaze writes temporary templates into
 |     the compiled-view directory while folding, and switching strategies
 |     inside one process leaves those behind for the next mode to trip over.
-|     A fresh process per mode also guarantees a cold compiled cache.
+|     The compiled-view directory is emptied at the start of every mode as
+|     well: a fresh process does not give a cold cache on its own, because the
+|     cache lives on disk and outlives the run that wrote it.
 |   - The gallery renders each example through Blade::render() at request time,
 |     which compiles a fresh template per call. That is a gallery affordance,
 |     not how an application page behaves, so this takes the gallery's markup
@@ -57,7 +63,15 @@ use Orchestra\Testbench\Foundation\Config;
 
 require __DIR__.'/../vendor/autoload.php';
 
-const MODES = ['blade', 'runtime', 'blaze', 'fold'];
+// The whole gallery stacked `--repeat` times is one very large template, and
+// Blade compiles it by running `token_get_all()` over the lot. At the default
+// `--repeat=10` that alone clears PHP's usual 128M, and the failure arrives as
+// an exhausted-memory fatal from inside the compiler rather than as anything
+// that looks like a benchmark problem. Raised here rather than in the composer
+// script so that a direct `php benchmarks/blaze.php --mode=blade` gets it too.
+ini_set('memory_limit', '1G');
+
+const MODES = ['blade', 'runtime', 'blaze'];
 
 $options = getopt('', ['repeat::', 'renders::', 'mode::']);
 $repeat = max(1, (int) ($options['repeat'] ?? 10));
@@ -130,7 +144,7 @@ function runDriver(int $repeat, int $renders): void
         );
     }
 
-    // Two different claims, so two checks. blade, blaze and fold render the same
+    // Two different claims, so two checks. blade and blaze render the same
     // components through different pipelines and must agree byte for byte.
     // `runtime` is a different implementation of the icon, so it is held to
     // equivalence instead: same elements, same classes, same values, allowing
@@ -138,11 +152,11 @@ function runDriver(int $repeat, int $renders): void
     $byMode = array_column($results, null, 'mode');
 
     $strict = array_unique(array_column(
-        array_intersect_key($byMode, array_flip(['blade', 'blaze', 'fold'])),
+        array_intersect_key($byMode, array_flip(['blade', 'blaze'])),
         'hash',
     ));
 
-    printf("\nblade / blaze / fold byte-identical: %s\n", count($strict) === 1 ? 'yes' : 'NO');
+    printf("\nblade / blaze byte-identical: %s\n", count($strict) === 1 ? 'yes' : 'NO');
     printf(
         "runtime equivalent to shipped (formatting aside): %s\n",
         ($byMode['runtime']['nhash'] ?? null) === ($byMode['blaze']['nhash'] ?? false) ? 'yes' : 'NO',
@@ -189,28 +203,31 @@ function runMode(string $basePath, string $mode, int $repeat, int $renders): voi
         $markup = str_replace('<shape:icon', '<x-benchruntime::icon', $markup);
     }
 
-    if ($mode === 'fold') {
-        registerFoldableButton($basePath, $scratch);
-
-        $markup = str_replace(
-            ['<shape:button', '</shape:button'],
-            ['<x-benchfold::button', '</x-benchfold::button'],
-            $markup,
-        );
-    }
-
     if ($mode === 'blade') {
         Blaze::disable();
     }
 
     View::addNamespace('bench', $scratch.'/views');
 
+    // A cold compiled cache, and it has to be taken rather than assumed.
+    //
+    // Every mode compiles the same component files, and Blade and Blaze both key
+    // their compiled output on the source path -- so a file left behind by the
+    // previous mode is picked up by the next one, which then measures the wrong
+    // pipeline or trips over a function the current mode never generated. The
+    // icon publish above only clears when it actually published something, so a
+    // second run in a row -- every icon already on disk -- clears nothing at all.
+    //
+    // It is also what makes `compile_ms` mean anything: timing compilation
+    // against a warm cache times a file read.
+    clearCompiledViews();
+
     $result = measure(
         $mode,
         $markup,
         $scratch.'/views/page.blade.php',
         $renders,
-        in_array($mode, ['blaze', 'fold'], true),
+        $mode === 'blaze',
     );
 
     if (getenv('BENCH_DUMP') !== false) {
@@ -256,7 +273,7 @@ function galleryMarkup(string $basePath, int $repeat): string
                 Save
             </shape:button>
             <shape:button variant="outline" color="neutral" size="sm">
-                <shape:icon name="close" size="sm" />
+                <shape:icon name="x" size="sm" />
                 Cancel
             </shape:button>
         </div>
@@ -311,6 +328,14 @@ function registerRuntimeIcon(string $scratch): void
             $aliases = array_filter((array) ($icons['aliases'] ?? []), 'is_string');
             $set ??= is_string($icons['set'] ?? null) ? $icons['set'] : 'lucide';
 
+            // The packaged table under the application's own, which is the order
+            // `shape:icon:add` resolves in -- `config('shape.icons.aliases')` ships
+            // empty, and the names Shape's own views use (`spinner`, `error`,
+            // `checkbox-check`, `select-chevron`) live only in Libraries. Without
+            // this the replica asks Blade Icons for `lucide-spinner`, which does
+            // not exist, and the mode dies on markup the other three render.
+            $aliases += \Onelegstudios\Shape\Icons\Libraries::aliases($set);
+
             $name = $aliases[$name] ?? $name;
             $prefix = $sets[$set] ?? $set;
             $icon = $prefix === '' ? $name : $prefix.'-'.$name;
@@ -337,48 +362,6 @@ function registerRuntimeIcon(string $scratch): void
 
     View::addNamespace('benchruntime', $scratch.'/runtime');
     Blade::anonymousComponentNamespace('benchruntime::components', 'benchruntime');
-}
-
-/**
- * The button with its config reads resolved into literal @props defaults.
- *
- * What a build step would have to emit for the button to fold. Every
- * substitution must apply: a silent miss would leave a config read in place,
- * and folding would bake it.
- */
-function registerFoldableButton(string $basePath, string $scratch): void
-{
-    $defaults = array_filter((array) config('shape.components.button'), 'is_string');
-
-    $replacements = [
-        '/^@blaze$/m' => '@blaze(fold: true)',
-        "/'variant' => null,/" => "'variant' => '".($defaults['variant'] ?? 'outline')."',",
-        "/'color' => null,/" => "'color' => '".($defaults['color'] ?? 'neutral')."',",
-        "/'size' => null,/" => "'size' => '".($defaults['size'] ?? 'md')."',",
-        '/\$defaults = array_filter.*?;\n/s' => '',
-        '/\s*\$variant \?\?=.*?;\n/' => "\n",
-        '/\s*\$color \?\?=.*?;\n/' => '',
-        '/\s*\$size \?\?=.*?;\n/' => '',
-    ];
-
-    $source = (string) file_get_contents($basePath.'/resources/views/components/button.blade.php');
-
-    foreach ($replacements as $pattern => $replacement) {
-        $result = preg_replace($pattern, $replacement, $source, -1, $count);
-
-        if (! is_string($result) || $count === 0) {
-            fwrite(STDERR, "Fold generation failed for the button: {$pattern} matched nothing.\n");
-            exit(1);
-        }
-
-        $source = $result;
-    }
-
-    File::ensureDirectoryExists($scratch.'/fold/components');
-    File::put($scratch.'/fold/components/button.blade.php', $source);
-
-    View::addNamespace('benchfold', $scratch.'/fold');
-    Blade::anonymousComponentNamespace('benchfold::components', 'benchfold');
 }
 
 /**
@@ -470,6 +453,30 @@ function normaliseHtml(string $html): string
     // a newline where an inline `{{ svg(...) }}` does not, and that is template
     // formatting rather than a difference in what was rendered.
     return trim((string) preg_replace(['/>\s+/', '/\s+</'], ['>', '<'], $html));
+}
+
+/**
+ * Empty the compiled view directory.
+ *
+ * Blaze writes its generated component functions into `view.compiled` alongside
+ * Blade's own compiled templates, so one sweep covers both pipelines.
+ */
+function clearCompiledViews(): void
+{
+    $compiled = (string) config('view.compiled');
+
+    if ($compiled === '' || ! File::isDirectory($compiled)) {
+        return;
+    }
+
+    foreach (File::glob($compiled.'/*.php') ?: [] as $file) {
+        File::delete($file);
+    }
+
+    // Blaze keeps folded-component bookkeeping in a subdirectory of its own.
+    foreach (File::directories($compiled) as $directory) {
+        File::deleteDirectory($directory);
+    }
 }
 
 /**

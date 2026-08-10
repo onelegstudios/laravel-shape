@@ -1,18 +1,29 @@
-{{-- No `@blaze`, and it is the one component here that could not have it anyway.
+@blaze
 
-     Blaze compiles `@aware` against its own data stack rather than Blade's, and the
-     two do not agree: `Illuminate\View\Concerns\ManagesComponents` checks the
-     component's own data before walking up to its ancestors, while
-     `Livewire\Blaze\Runtime\BlazeRuntime::getConsumableData` only walks the
-     ancestors -- and Blaze's `AwareCompiler` also unsets the key from
-     `$attributes` on the way past. A field compiled by one and a label by the
-     other therefore read a different name, which is the one thing this component
-     exists to make reliable.
+{{-- `@blaze` on every member of this family, and the whole family together, which
+     is the part that matters: `@aware` reads the render stack, so a field compiled
+     by one pipeline and a label by the other would read two different names. Moving
+     them as a unit is what keeps that boundary from ever existing.
 
-     So the whole family stays on Blade's pipeline: the field pushes its data
-     through `$__env`, and its children read it back the same way. `fold` was never
-     available to any of them regardless -- Blaze throws
-     InvalidBlazeFoldUsageException for a component using `@aware` at all. --}}
+     The disagreement between the two `@aware` implementations is real but narrower
+     than it looks. `ManagesComponents::getConsumableComponentData()` checks the
+     component's own data before walking its ancestors;
+     `BlazeRuntime::getConsumableData()` only walks ancestors -- but Blaze's compiler
+     emits `$__blaze->pushData($attrs)` at the *call site*, before the child runs, so
+     the component's own attributes are sitting at the top of that stack and both
+     implementations hand back the same value. The `name` and `the aware boundary`
+     blocks in tests/Feature/FieldComponentTest pin that rather than trusting it.
+
+     Where the two genuinely part company is that Blaze's `AwareCompiler` unsets each
+     key from `$attributes` and Blade's `@aware` leaves it there. Every file in this
+     family that reads the caller's own value back off the bag has to put it back
+     first; input.blade.php carries that explanation, being the file with the
+     sharpest version of it.
+
+     No `fold` here, and not because it is unavailable -- `InvalidBlazeFoldUsageException::forAware()`
+     is defined in Blaze and never called. It is off because folding bakes
+     `Control::$sequence` into the compiled view, so unnamed fields in a loop would
+     all answer to one id. See docs/performance.md. --}}
 
 @props([
     'name' => null,

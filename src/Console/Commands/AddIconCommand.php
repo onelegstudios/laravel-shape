@@ -148,19 +148,33 @@ class AddIconCommand extends Command
                 continue;
             }
 
-            $files->ensureDirectoryExists(dirname($target));
-            $files->put($target, $this->component($contents, $icon, $set));
+            // Two files per icon: the artwork as a plain view, and the component
+            // that includes it. WritesIconComponents::component() has the whole
+            // reason -- in short, `<shape:icon>` reaches artwork with `@include`
+            // rather than a component resolution, and an include cannot end at a
+            // file carrying `@blaze`.
+            $art = $this->artPath($path, $set, $name);
 
-            // The default set gets a second, one-line component that forwards to
-            // the real one. That is what lets <shape:icon name="check" /> resolve
-            // without reading config for the default set name -- a config read
-            // would put global state back into the component and cost the fold.
-            // The forward is itself folded away, so it is free at runtime.
+            $files->ensureDirectoryExists(dirname($art));
+            $files->put($art, $this->art($contents, $icon, $set));
+
+            $files->ensureDirectoryExists(dirname($target));
+            $files->put($target, $this->component($this->artView($set, $name), $set, $name));
+
+            // The default set gets a second pair, forwarding to the real one. That
+            // is what lets <shape:icon name="check" /> resolve without reading
+            // config for the default set name -- a config read would put global
+            // state back into the component and cost the fold. Both forwards are
+            // one line, and the component half folds away like any other.
             if ($set === $default) {
                 $forward = $path.'/default/'.$name.'.blade.php';
+                $forwardArt = $this->artPath($path, 'default', $name);
+
+                $files->ensureDirectoryExists(dirname($forwardArt));
+                $files->put($forwardArt, $this->forwardArt($this->artView($set, $name)));
 
                 $files->ensureDirectoryExists(dirname($forward));
-                $files->put($forward, $this->forward($set, $name));
+                $files->put($forward, $this->forward($this->artView($set, $name)));
             }
 
             $this->components->twoColumnDetail($set.'/'.$name, '<fg=green>published</>');

@@ -56,6 +56,35 @@ trait InteractsWithPublishedIcons
     }
 
     /**
+     * Where an icon's artwork lives on disk.
+     *
+     * A published icon is two files: the component a call site addresses, at
+     * `{set}/{name}.blade.php`, and the artwork it includes, one level down in
+     * `art/`. WritesIconComponents::component() has the reason for the split.
+     *
+     * `art` cannot collide with an icon: the listing that decides which names
+     * exist reads files rather than directories, so nothing ever publishes an
+     * icon whose name is a directory here.
+     */
+    private function artPath(string $path, string $set, string $name): string
+    {
+        return $path.'/'.$set.'/art/'.$name.'.blade.php';
+    }
+
+    /**
+     * The view name that artwork is included through.
+     *
+     * The same fact as the path above, spelled the way Blade addresses it, and
+     * kept beside it so the two cannot drift apart. Four things need it: the two
+     * files that include artwork, the component that renders one, and the verb
+     * that reads a forward to decide which set it belongs to.
+     */
+    private function artView(string $set, string $name): string
+    {
+        return 'shape-icons::'.$set.'.art.'.$name;
+    }
+
+    /**
      * Which published set a verb should act on.
      *
      * A set is offered because it has files in it, not because it is configured:

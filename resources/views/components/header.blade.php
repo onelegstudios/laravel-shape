@@ -1,10 +1,12 @@
-{{-- No `@blaze`, and the reason is the family's rather than this file's own.
-     `header/item.blade.php` reads the `size` below through `@aware`, and Blaze
-     compiles `@aware` against its own data stack while Blade compiles it against
-     the component stack -- the disagreement field.blade.php sits out for at
-     length. A header compiled by one and an item by the other would size from two
-     different places, and the markup would render either way, so the whole family
-     stays on Blade's pipeline together. --}}
+@blaze
+
+{{-- `@blaze`, and the reason is the family's rather than this file's own.
+     `header/item.blade.php` reads the `size` below through `@aware`, and the two
+     `@aware` implementations differ -- the disagreement field.blade.php sets out
+     at length. A header compiled by one and an item by the other would size from
+     two different places, and the markup would render either way, so the four
+     files move together. Nothing to save and restore here: no `@aware` in this
+     file. --}}
 
 @props([
     'size' => null,

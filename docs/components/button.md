@@ -67,6 +67,17 @@ It squares up to the height its labelled rung already stands at — 24, 32, 36 a
 icon button and a text button of the same rung and variant sit level in the same toolbar row,
 and `xs` holds the same WCAG 2.5.8 floor with no words to widen it.
 
+The shape is inferred from the markup: an icon, and a slot with nothing in it. A slot holding
+nothing but a line break is the one case that reads either way, so say so with `square`:
+
+```blade
+<shape:button icon="trash-2" aria-label="Delete" square>
+</shape:button>
+```
+
+`square` overrides the inference in both directions — `square="false"` keeps a label's padding
+on a button that has no label.
+
 **Give it an `aria-label`.** There is no text left to name the button, and Shape will not
 invent one: the mark stays hidden from assistive tech, exactly as it is beside a label, so a
 button with neither announces as nothing at all. Shape does not throw for a missing one,

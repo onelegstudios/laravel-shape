@@ -1,7 +1,8 @@
-{{-- No `@blaze`, for the reason field.blade.php spells out: this component
-     renders that one, and a family split across two `@aware` implementations
-     reads two different names. It would not have folded regardless -- the
-     `config()` read below is the same thing that disqualifies the button. --}}
+@blaze
+
+{{-- `@blaze` with the rest of the family: they move as a unit so no `@aware`
+     boundary is ever mixed, and the bag is saved and restored around `@aware` for
+     the reason input.blade.php spells out. See the top of field.blade.php. --}}
 
 @props([
     'label' => null,
@@ -25,7 +26,15 @@
      `icons.aliases`, which changes it everywhere at once -- which is the right
      grain for a mark that means "this is a select". --}}
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['name' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     $defaults = array_filter((array) config('shape.components.select'), 'is_string');
@@ -128,6 +137,22 @@
         ];
 
         $rung = isset($rungs[$size]) ? $size : 'md';
+
+        // The chevron's size as a class rather than as the icon's `size` prop, and
+        // for the reason the checkbox's marks take the same treatment: a bound prop
+        // declines the fold, a bound class does not, and the chevron is drawn on
+        // every select on the page. The icon's own note has the mechanism.
+        //
+        // The icon's scale verbatim, because the chevron takes the control's rung
+        // straight through. SelectComponentTest pins the pairs, so this drifting
+        // from the icon's table is a failure rather than a chevron that is quietly
+        // the wrong size.
+        $chevrons = [
+            'xs' => 'size-3.5',
+            'sm' => 'size-4',
+            'md' => 'size-5',
+            'lg' => 'size-6',
+        ];
 
         // Where the marks go, and the numbers are not arbitrary: each is the mark's
         // own width plus the gap the input's flex rung would have held it off by --
@@ -239,8 +264,8 @@
         @if (! $list)
             <x-shape::icon
                 name="select-chevron"
-                :size="$rung"
-                class="pointer-events-none col-start-1 row-start-1 self-center justify-self-end text-ink-muted"
+                size="none"
+                class="{{ $chevrons[$rung] }} pointer-events-none col-start-1 row-start-1 self-center justify-self-end text-ink-muted"
             />
         @endif
     </div>

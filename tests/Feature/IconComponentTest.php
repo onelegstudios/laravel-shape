@@ -41,13 +41,18 @@ it('renders from a named set', function () {
         ->toContain('data-fixture="cross"');
 });
 
-it('fails loudly, naming the component it looked for, when an icon is not published', function () {
+it('fails loudly, naming the view it looked for, when an icon is not published', function () {
     // The whole point of dropping the runtime lookup: a name that was never
     // published fails the first time the page is loaded, in development, the same
-    // way any other typo'd Blade component does -- rather than at runtime in
+    // way any other typo'd Blade view does -- rather than at runtime in
     // production, or silently from the wrong set.
+    //
+    // The name it reports is the artwork's rather than the component's, because
+    // the artwork is what `<shape:icon>` includes. Blade drops the namespace from
+    // the message, so what is left is the set, the `art` directory and the icon --
+    // enough to say which name was missing and which set it was looked for in.
     Blade::render('<shape:icon name="never-published" />');
-})->throws(ViewException::class, 'shape-icon::default.never-published');
+})->throws(ViewException::class, 'default.art.never-published');
 
 it('escapes an ampersand written plainly in a label', function () {
     expect(Blade::render('<shape:icon name="check" label="Rock & Roll" />'))

@@ -1,5 +1,7 @@
+@blaze
+
 {{-- The prefix's shape, mirrored, and every reason for it is written down next door
-     rather than repeated here -- the `@blaze` opt-out, why neither value is a prop,
+     rather than repeated here -- what `@blaze` costs this pair, why neither value is a prop,
      why the bag is read after `@aware`, what each number in the plate table cancels,
      and why `border-inherit` is what makes a nested affix possible at all.
 
@@ -7,7 +9,15 @@
      order class is `order-last`, the divider is `border-s`, and the corner it rounds
      is `rounded-e-md`. --}}
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['size' => null, 'affix' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     $own = $attributes->get('size');

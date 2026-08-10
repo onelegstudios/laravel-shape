@@ -1,13 +1,26 @@
-@blaze
+@blaze(fold: true)
 
-{{-- Blaze compiles this into a plain PHP function and calls it directly. It is not
-     in the header family's boat: nothing here reads `@aware`, so the disagreement
-     that keeps those files on Blade's pipeline has nothing to disagree about.
+{{-- Folded, so a heading written with its props as literals leaves no component
+     behind at all -- which is most of them, a heading being page furniture rather
+     than something built from data. Nothing here reads `@aware`, so it needs
+     neither the family's move-as-a-unit argument nor the bag saved and restored
+     around the directive.
 
-     `fold` is out for the reason the button's is -- the `config()` read below would
-     be baked into the calling template the first time it compiled, and an
-     application's published default would stop being read. `memo` is out because
-     this component is mostly slot.
+     The `config()` read below is a compile-time input, the way the button's is:
+     ShapeServiceProvider stamps config/shape.php as a fold dependency, so editing
+     a published default invalidates every view that baked one. What that gives up
+     is the same thing the button gave up -- a default set at runtime, with
+     `Config::set` or per tenant, no longer reaches this component.
+
+     `$actions` is read in logic below rather than only echoed, which would be the
+     hazard the button's `square` prop exists for: at compile time a slot is a
+     placeholder, so an emptiness test on one answers differently there than at
+     render. It is not a hazard here, and the reason is worth knowing rather than
+     relying on -- `actions` is a declared prop, and Blaze treats every declared
+     prop as unsafe, slots included. A call site that writes the slot declines the
+     fold on its own. A test pins that, because nothing in this file says it.
+
+     `memo` is still out: it only covers components without slots.
 
      The directive has to be the first thing in the file: Blaze looks for it with an
      anchored match, so a comment above it reads as no directive at all. --}}

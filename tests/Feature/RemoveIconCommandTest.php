@@ -63,7 +63,7 @@ it('leaves a forward alone when it points at another set', function () {
     removeIcon(['name' => ['check'], '--set' => 'fixture'])->assertSuccessful();
 
     expect(File::exists($this->iconPath.'/fixture/check.blade.php'))->toBeFalse()
-        ->and(File::get($this->iconPath.'/default/check.blade.php'))->toContain('lucide.check');
+        ->and(File::get($this->iconPath.'/default/check.blade.php'))->toContain('lucide.art.check');
 });
 
 it('names the file rather than resolving it through the alias table', function () {

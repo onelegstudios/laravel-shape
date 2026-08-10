@@ -91,7 +91,7 @@ it('reports a hand-edited file as edited', function () {
     // so the only thing that can explain the difference is the edit.
     stageIcon(['name' => ['check']])->assertSuccessful();
 
-    $file = $this->iconPath.'/lucide/check.blade.php';
+    $file = $this->iconPath.'/lucide/art/check.blade.php';
 
     File::put($file, File::get($file)."\n{{-- mine --}}\n");
 
@@ -108,7 +108,7 @@ it('tells a hand edit and an upgrade apart when both have happened', function ()
 
     stageIcon(['name' => ['mark']])->assertSuccessful();
 
-    $file = $this->iconPath.'/fixture/mark.blade.php';
+    $file = $this->iconPath.'/fixture/art/mark.blade.php';
 
     File::put($file, File::get($file)."\n{{-- mine --}}\n");
 
@@ -321,7 +321,7 @@ it('succeeds on drift without --strict', function () {
     // failed the build over one would teach people to stop running it.
     stageIcon(['name' => ['check']])->assertSuccessful();
 
-    $file = $this->iconPath.'/lucide/check.blade.php';
+    $file = $this->iconPath.'/lucide/art/check.blade.php';
 
     File::put($file, File::get($file)."\n{{-- mine --}}\n");
 
@@ -331,7 +331,7 @@ it('succeeds on drift without --strict', function () {
 it('says so when a file carries no stamp', function () {
     stageIcon(['name' => ['check']])->assertSuccessful();
 
-    unstamp($this->iconPath.'/lucide/check.blade.php');
+    unstamp($this->iconPath.'/lucide/art/check.blade.php');
 
     checkIcons()
         ->expectsOutputToContain('(unstamped)')
@@ -358,7 +358,7 @@ it('still answers whether an unstamped file is out of date', function () {
 it('calls an unstamped file up to date when its artwork still matches', function () {
     stageIcon(['name' => ['check']])->assertSuccessful();
 
-    unstamp($this->iconPath.'/lucide/check.blade.php');
+    unstamp($this->iconPath.'/lucide/art/check.blade.php');
 
     checkIcons()
         ->expectsOutputToContain('up to date')
@@ -375,7 +375,7 @@ it('changes nothing, even where everything is wrong', function () {
 
     stageIcon(['name' => ['mark', 'other']])->assertSuccessful();
 
-    $edited = $this->iconPath.'/fixture/other.blade.php';
+    $edited = $this->iconPath.'/fixture/art/other.blade.php';
 
     File::put($edited, File::get($edited)."\n{{-- mine --}}\n");
 

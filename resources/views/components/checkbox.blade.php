@@ -1,7 +1,8 @@
-{{-- No `@blaze`, for the reason field.blade.php spells out: this component
-     renders that one, and a family split across two `@aware` implementations
-     reads two different names. It would not have folded regardless -- the
-     `config()` read below is the same thing that disqualifies the button. --}}
+@blaze
+
+{{-- `@blaze` with the rest of the family: they move as a unit so no `@aware`
+     boundary is ever mixed, and the bag is saved and restored around `@aware` for
+     the reason input.blade.php spells out. See the top of field.blade.php. --}}
 
 @props([
     'label' => null,
@@ -16,7 +17,15 @@
      box, and a second block under the first is just the first block's second
      paragraph. --}}
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['name' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     $defaults = array_filter((array) config('shape.components.checkbox'), 'is_string');
@@ -89,11 +98,23 @@
         'lg' => 'h-6',
     ];
 
+    // The mark's size as a class rather than as one of the icon's rung names, and
+    // the reason is folding rather than taste. A bound `:size` is a declared prop,
+    // so it declines the fold and costs a component render per mark on every
+    // render of the page; a bound `class` is pass-through, so it folds. This
+    // control draws two marks and a table row draws forty of it, which is where
+    // that difference stops being academic.
+    //
+    // These are the icon's own values for the rungs this table used to name -- xs
+    // and sm both took the icon's `xs`, md took `sm`, lg took `md`. The pairs are
+    // pinned by the size dataset in CheckboxComponentTest, so a drift between this
+    // table and the icon's shows up as a failure rather than as a mark that is
+    // quietly the wrong size.
     $marks = [
-        'xs' => 'xs',
-        'sm' => 'xs',
-        'md' => 'sm',
-        'lg' => 'md',
+        'xs' => 'size-3.5',
+        'sm' => 'size-3.5',
+        'md' => 'size-4',
+        'lg' => 'size-5',
     ];
 
     $gaps = [
@@ -148,10 +169,14 @@
                  silently is the bug this covers.
 
                  `$resolved->inherited` rather than `$name === null`, which is the
-                 obvious test and the wrong one: Blade's `@aware` reads a component's
-                 own data before its ancestors', so `$name` is `terms` for the
+                 obvious test and the wrong one: `@aware` hands back a component's
+                 own data before its ancestors' on both pipelines -- Blade checks
+                 `currentComponentData` first, Blaze finds the call site's own
+                 `pushData` at the top of its stack -- so `$name` is `terms` for the
                  standalone box above and a check against null would suppress exactly
-                 the message that has nowhere else to go. See Control::resolve(). --}}
+                 the message that has nowhere else to go. What tells the two apart is
+                 whether the bag still carries the name, which is the whole reason it
+                 is restored after `@aware`. See Control::resolve(). --}}
             @if (! $resolved->inherited)
                 <x-shape::error :name="$resolved->field" />
             @endif
@@ -230,16 +255,19 @@
              would come down to Tailwind's sort order. Opacity touches a different
              property entirely, so there is nothing to resolve: the tick stays in the
              cell, invisible, and the bar draws over it. --}}
+        {{-- `size="none"` and the size on `class`, which is what lets these two
+             fold. The icon's own note has the mechanism; the short version is that
+             a bound prop declines a fold and a bound class does not. --}}
         <x-shape::icon
             name="checkbox-check"
-            :size="$marks[$rung]"
-            class="{{ $mark }} peer-checked:block peer-indeterminate:opacity-0"
+            size="none"
+            class="{{ $mark }} {{ $marks[$rung] }} peer-checked:block peer-indeterminate:opacity-0"
         />
 
         <x-shape::icon
             name="checkbox-indeterminate"
-            :size="$marks[$rung]"
-            class="{{ $mark }} peer-indeterminate:block"
+            size="none"
+            class="{{ $mark }} {{ $marks[$rung] }} peer-indeterminate:block"
         />
     </span>
 @endif

@@ -177,7 +177,12 @@ class RemoveIconCommand extends Command
                 continue;
             }
 
+            // Both halves of the icon: the component a call site addresses and the
+            // artwork it includes. Leaving the artwork would leave a file nothing
+            // reaches, and `publishedIconsIn()` reads components -- so it would
+            // never be offered for removal again either.
             $files->delete($path.'/'.$set.'/'.$name.'.blade.php');
+            $files->delete($this->artPath($path, $set, $name));
 
             $this->removeForward($files, $path, $set, $name);
 
@@ -299,11 +304,15 @@ class RemoveIconCommand extends Command
             return;
         }
 
-        if (! str_contains($files->get($forward), "x-shape-icon::{$set}.{$name}")) {
+        // The view name both forwards include is what identifies which set they
+        // belong to, and it is the same string in each -- so one read decides the
+        // fate of the pair.
+        if (! str_contains($files->get($forward), $this->artView($set, $name))) {
             return;
         }
 
         $files->delete($forward);
+        $files->delete($this->artPath($path, 'default', $name));
     }
 
     /**
@@ -316,6 +325,13 @@ class RemoveIconCommand extends Command
     {
         if (! $files->isDirectory($directory)) {
             return;
+        }
+
+        // The artwork lives one level down, so the set directory is never empty
+        // while an empty `art/` is still sitting in it -- and a set that could
+        // never be pruned would go on being offered forever.
+        if ($files->isDirectory($directory.'/art') && $files->files($directory.'/art') === []) {
+            $files->deleteDirectory($directory.'/art');
         }
 
         if ($files->files($directory) !== [] || $files->directories($directory) !== []) {

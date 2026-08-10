@@ -1,6 +1,10 @@
-{{-- No `@blaze`, and this is the file that decides it for the family: the `@aware`
-     below is the thing Blaze and Blade compile differently. See the top of
-     header.blade.php. --}}
+@blaze
+
+{{-- `@blaze`, and this is the file the family's decision turns on: the `@aware`
+     below is the thing Blaze and Blade compile differently, which is why all four
+     move together. See the top of header.blade.php. The bag is saved and restored
+     around it because the `size` read below is a read of the caller's own value;
+     input.blade.php has the reason. --}}
 
 {{-- No `@props` for `size`, which is the decision rather than an omission, and the
      hazard is the one input/prefix.blade.php spells out: `@aware` assigns
@@ -13,7 +17,15 @@
      brand declares its own because it switches element on it. --}}
 @props(['current' => false])
 
+@php
+    $__bag = $attributes->getAttributes();
+@endphp
+
 @aware(['size' => null])
+
+@php
+    $attributes->setAttributes($__bag);
+@endphp
 
 @php
     // Own attribute first, then the header around it, then config. The bag read is
