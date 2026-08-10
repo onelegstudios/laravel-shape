@@ -211,6 +211,31 @@ leaving it alone. Shape gives those two a cursor and nothing else, and reserves 
 for `picker`, which Chromium draws at full contrast always. `cursor` never disturbs a reveal;
 `opacity` usually does.
 
+## State Variants
+
+Two more, and these name a state rather than a part:
+
+| Variant | Selector | Used by |
+|---|---|---|
+| `invalid` | `&[aria-invalid="true"]` | The control that carries the attribute |
+| `has-invalid` | `&:has([aria-invalid="true"])` | A wrapper around one that does |
+
+A field turns red through CSS rather than through PHP, and that is a consequence of
+[folding](performance.md): a control is evaluated once, when the view is compiled, so it cannot
+know on that pass what the validator will make of the request. `aria-invalid` is written on
+render — it has to be there anyway, since it is what tells a screen reader the value is wrong —
+and the colour follows it.
+
+The practical effect is that the two never disagree, and that setting the attribute yourself is
+enough:
+
+```blade
+<input aria-invalid="true" class="border-neutral-border invalid:border-danger-border" />
+```
+
+`="true"` is part of both selectors on purpose: `aria-invalid="false"` is a legal way to say a
+field is fine, and a bare `[aria-invalid]` would match it.
+
 ---
 
 [← Icons](icons.md) · [Index](README.md) · [Configuration →](configuration.md)

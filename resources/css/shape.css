@@ -355,6 +355,35 @@
 
 @custom-variant swatch-wrapper (&::-webkit-color-swatch-wrapper);
 
+/* The two that name a state rather than a part, and the only ones a component
+   writes for a reason other than reaching a pseudo-element.
+
+   What the validator made of a field is the one thing about a control that Shape
+   cannot know until the request is in front of it, and the components fold -- they
+   are evaluated once, when the view is compiled, and their markup written into the
+   calling template. So the colour cannot be chosen in PHP the way a variant or a
+   rung is. It is chosen here instead, off `aria-invalid`, which the control writes
+   on render and which has to be there anyway: it is what tells a screen reader the
+   value is wrong.
+
+   That leaves the two shapes a control comes in. Seven of them carry the attribute
+   on the element they colour, and take `invalid:`. The input and the file input
+   colour a wrapper around a control that is not the wrapper, and take
+   `has-invalid:`.
+
+   `="true"` rather than a bare attribute match, because `aria-invalid="false"` is
+   a legal way to say a field is fine and reads as present to `[aria-invalid]`.
+
+   Tailwind composes `has-` with a variant name of its own accord, so `has-invalid:`
+   may well resolve from the first of these without the second. Declared anyway:
+   a variant this file does not name is not a build error -- Tailwind emits nothing,
+   the class lands in the markup, and the field simply never turns red. That is too
+   quiet a failure to leave to a composition rule holding. */
+
+@custom-variant invalid (&[aria-invalid="true"]);
+
+@custom-variant has-invalid (&:has([aria-invalid="true"]));
+
 /* light-dark() resolves against `color-scheme`, so declaring both here is what
    makes the surface tokens follow the operating system. Setting the scheme on an
    element overrides it for that subtree, which is how the classes below work. */

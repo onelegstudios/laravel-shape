@@ -1,9 +1,10 @@
 @blaze
 
 {{-- `@blaze` with the rest of the family, for the reason field.blade.php spells
-     out: they move as a unit so no `@aware` boundary is ever mixed. No `fold` --
-     the `config()` read below is the same thing that disqualifies the button, and
-     `Control::$sequence` is a second reason on top of it. --}}
+     out: they move as a unit so no `@aware` boundary is ever mixed. No `fold`, and
+     the reason moved: the error-bag read that used to disqualify this file is in an
+     island now, and the id counter is gone. What is left is `@aware` -- see the
+     block at the top of field.blade.php. --}}
 
 @props([
     'label' => null,
@@ -127,36 +128,30 @@
     // handed to an element that renders no label is one nothing points at.
     $chrome = ! $hidden && ($label !== null || $description !== null || $descriptionTrailing !== null);
 
-    // Which field this is, whether the validator minds, what id its label points
-    // at, and which of the sentences around it describe it -- four questions every
-    // control in this family has to answer, resolved in one place so a select and a
-    // checkbox do not each answer them again slightly differently. `Control` next
-    // to `Fields` in src/ has the rules and the reasons.
+    // Which field this is, what id its label points at, and which of the sentences
+    // around it describe it -- the questions every control in this family has to
+    // answer, resolved in one place so a select and a checkbox do not each answer
+    // them again slightly differently. `Control` next to `Fields` in src/ has the
+    // rules and the reasons.
     //
     // `name` is deliberately not a prop. It has to reach the rendered element for
     // an ordinary HTML form to work at all, so it stays on the bag -- read out of
     // it below rather than taken from it, unlike every other value this component
     // consumes.
     //
-    // `$errors ?? null` rather than an `isset` branch: the bag is shared onto views
-    // by ShareErrorsFromSession, and a package cannot assume the middleware ran --
-    // a Blade::render() outside the web group has no session, and neither does a
-    // mail template. `??` does not warn on a variable that was never set, so the
-    // guard is the argument itself.
+    // What the validator made of the field is not asked here, and that is the line
+    // this component folds along: everything above is answerable when the view is
+    // compiled, and that is not. `$resolved->live()` carries what the answer will
+    // need down to the island at the foot of this file, which asks on every render.
     $resolved = \Onelegstudios\Shape\Control::resolve(
         attributes: $attributes,
         name: $name,
         invalid: $invalid,
-        errors: $errors ?? null,
-        chrome: $chrome,
+        label: $chrome ? $label : null,
         description: $description !== null,
         descriptionTrailing: $descriptionTrailing !== null,
+        message: $chrome,
     );
-
-    // Kept as a local because the recipe below reads it and the recursion passes
-    // it down: the shorthand has already settled the question, so the bare render
-    // inside it should not go back to the bag and settle it again.
-    $bad = $resolved->invalid;
 @endphp
 
 @if ($hidden)
@@ -190,7 +185,7 @@
             :prefix="$prefix"
             :suffix="$suffix"
             :affix="$affix"
-            :invalid="$bad"
+            :invalid="$invalid"
         >{{ $slot }}</x-shape::input>
     </x-shape::field>
 @else
@@ -237,13 +232,25 @@
         // Tailwind's scanner finds them through `@source "../views"` and the
         // safelist in shape.css has nothing to say about them.
         //
+        // Both states in one string, chosen by CSS rather than by a branch here, and
+        // that is what folding costs and buys. This component is evaluated once when
+        // the view is compiled, so a branch on the error bag would freeze whatever
+        // the validator happened to be saying then. `has-invalid:` reads it off the
+        // control on render instead -- see the variant block in shape.css. The
+        // wrapper matches on a descendant because the attribute belongs to the
+        // control, not to the box drawn around it.
+        //
+        // The ring colour is unvariant where it used to be behind `focus-within:`.
+        // It costs nothing -- `outline-width` is zero until `focus-within:outline-2`
+        // sets it -- and it keeps both halves of the pair one variant apart, so
+        // which of them wins is Tailwind's plainest ordering rule rather than a
+        // question about how deeply stacked variants sort.
+        //
         // One string rather than a border half and a ring half, which an earlier
         // draft split so a segmented affix could take the colour without the ring.
         // It does not need to: the plate inherits this computed border colour, so it
         // follows the pair below in both states without either file naming the other.
-        $box = $bad
-            ? 'border-danger-border focus-within:outline-danger-ring'
-            : 'border-neutral-border focus-within:outline-neutral-ring';
+        $box = 'border-neutral-border outline-neutral-ring has-invalid:border-danger-border has-invalid:outline-danger-ring';
 
         // `focus-within` rather than `focus-visible`: the ring belongs to the box,
         // and the thing that takes focus is the control inside it. A text field is
@@ -310,7 +317,12 @@
         // and `placeholder` are things only the control can act on.
         $frame = $attributes->only('class')->merge(['class' => $frame.' '.$rungs[$rung].' '.$box]);
 
-        $control = $attributes->except('class')->merge(array_merge(
+        // `aria-describedby` leaves the bag because the island below writes it: the
+        // list is settled here, but whether the message joins it is not, and one
+        // element cannot carry the attribute twice. `Control::resolve()` has already
+        // read the caller's own value, so nothing written at the call site is lost
+        // -- it comes back out of `state()` with the rest.
+        $control = $attributes->except(['class', 'aria-describedby'])->merge(array_merge(
             ['type' => 'text', 'class' => $control.' '.$type[$rung]],
             $resolved->attributes(),
         ));
@@ -349,7 +361,20 @@
             <x-shape::input.prefix :size="$rung" :affix="$affix">{{ $pre }}</x-shape::input.prefix>
         @endif
 
-        <input {{ $control }} />
+        {{-- The island, and the only thing in this component that is not settled by
+             the time the view is compiled. `aria-invalid` is what says the value is
+             wrong -- to a screen reader, and to the `has-invalid:` variant that
+             colours the box -- and whether the message joins `aria-describedby`
+             depends on the same read. Folding evaluates this file once, so both are
+             held back rather than baked; `Control::state()` weighs them per render
+             against the array `live()` wrote into the compiled view beside it.
+
+             The bag reaches it as an argument rather than being read inside, so the
+             guard is the argument: it is shared onto views by ShareErrorsFromSession
+             and a package cannot assume the middleware ran -- a Blade::render()
+             outside the web group has no session, and neither does a mail template.
+             `??` does not warn on a variable that was never set. --}}
+        <input {{ $control }}@unblaze($resolved->live()){!! \Onelegstudios\Shape\Control::state($scope, $errors ?? null) !!}@endunblaze />
 
         @if ($post !== null)
             <x-shape::input.suffix :size="$rung" :affix="$affix">{{ $post }}</x-shape::input.suffix>

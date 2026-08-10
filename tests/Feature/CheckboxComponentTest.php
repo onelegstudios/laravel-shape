@@ -145,8 +145,13 @@ describe('the box', function () {
         // The one place in the family that differs. The control *is* the box, so
         // `focus-within` would just be `focus` -- and a checked box wearing a
         // permanent ring is noise.
+        // The width is what carries the state -- `outline-width` is zero until
+        // `focus-visible:outline-2` sets it -- so the colour beside it rides
+        // unvariant. It moved there when the danger half became a CSS variant:
+        // the two have to stay one variant apart for `invalid:` to win cleanly.
         expect(box(Blade::render('<shape:checkbox />')))
-            ->toContain('focus-visible:outline-neutral-ring')
+            ->toContain('focus-visible:outline-2')
+            ->toContain('outline-neutral-ring')
             ->not->toContain('focus-within:');
     });
 
@@ -384,7 +389,8 @@ describe('invalid', function () {
         seedErrors(['terms' => ['Required.']]);
 
         expect(box(Blade::render('<shape:checkbox name="terms" />')))
-            ->toContain('focus-visible:outline-danger-ring');
+            ->toContain('invalid:outline-danger-ring')
+            ->toContain('aria-invalid="true"');
     });
 
     it('lets the call site mark a field the validator has not seen', function () {
@@ -395,9 +401,13 @@ describe('invalid', function () {
     it('lets the call site clear a field the validator has', function () {
         seedErrors(['terms' => ['Required.']]);
 
+        // `aria-invalid` is the whole of the signal now: the danger classes ride in
+        // every control's class list behind an `invalid:` variant, so what says a
+        // field is wrong is the attribute the variant matches on. Asserting the
+        // absence of a class name here would assert nothing -- it is always there.
         expect(box(Blade::render('<shape:checkbox name="terms" :invalid="false" />')))
             ->toContain('border-neutral-border')
-            ->not->toContain('border-danger-border');
+            ->not->toContain('aria-invalid');
     });
 
     it('stays quiet when there is no bag to read', function () {

@@ -2,7 +2,10 @@
 
 {{-- `@blaze` with the rest of the family: they move as a unit so no `@aware`
      boundary is ever mixed, and the bag is saved and restored around `@aware` for
-     the reason input.blade.php spells out. See the top of field.blade.php. --}}
+     the reason input.blade.php spells out. See the top of field.blade.php.
+
+     No `fold`, and what stands in the way is `@aware` rather than anything in this
+     file -- the block at the top of field.blade.php has it. --}}
 
 @props([
     'label' => null,
@@ -37,13 +40,12 @@
         attributes: $attributes,
         name: $name,
         invalid: $invalid,
-        errors: $errors ?? null,
-        chrome: $chrome,
+        label: $chrome ? $label : null,
         description: $description !== null,
         descriptionTrailing: $descriptionTrailing !== null,
+        message: $chrome,
     );
 
-    $bad = $resolved->invalid;
 @endphp
 
 @if ($chrome)
@@ -60,7 +62,7 @@
         <x-shape::color
             {{ $attributes->merge($resolved->forward()) }}
             :size="$size"
-            :invalid="$bad"
+            :invalid="$invalid"
         />
     </x-shape::field>
 @else
@@ -116,19 +118,45 @@
         // The input's pair, unchanged. This control has a border, so it says it
         // there -- and written out rather than interpolated so Tailwind's scanner
         // meets both class names literally.
-        $role = $bad
-            ? 'border-danger-border focus-visible:outline-danger-ring'
-            : 'border-neutral-border focus-visible:outline-neutral-ring';
+        // Both states in one string, chosen by CSS rather than by a branch here.
+        // This component folds -- it is evaluated once, when the view is compiled --
+        // so a branch on the error bag would freeze whatever the validator happened
+        // to be saying then. `invalid:` reads it off the control on render instead;
+        // see the variant block in shape.css.
+        //
+        // The ring colour is unvariant where it used to sit behind the focus state.
+        // It costs nothing, since `outline-width` is zero until the focus rule above
+        // sets it, and it keeps the pair one variant apart so which of them wins is
+        // Tailwind's plainest ordering rule rather than a question about how deeply
+        // stacked variants sort.
+        $role = 'border-neutral-border outline-neutral-ring invalid:border-danger-border invalid:outline-danger-ring';
 
         // No hex beside it. Reading the value back into text takes JavaScript, and
         // this library ships none -- a `<shape:input>` bound to the same model is
         // the way to show it, which is a call site's decision rather than this
         // component's.
-        $control = $attributes->merge(array_merge(
+        // `aria-describedby` leaves the bag because the island below writes it: the
+        // list is settled here, but whether the message joins it is not, and one
+        // element cannot carry the attribute twice. `Control::resolve()` has already
+        // read the caller's own value, so nothing written at the call site is lost.
+        $control = $attributes->except('aria-describedby')->merge(array_merge(
             ['type' => 'color', 'class' => $control.' '.$sizes[$rung].' '.$role],
             $resolved->attributes(),
         ));
     @endphp
 
-    <input {{ $control }} />
+    {{-- The island, and the only thing in this component that is not settled by
+         the time the view is compiled. `aria-invalid` is what says the value is
+         wrong -- to a screen reader, and to the variant that colours the control
+         -- and whether the message joins `aria-describedby` depends on the same
+         read. Folding evaluates this file once, so both are held back rather
+         than baked; `Control::state()` weighs them per render against the array
+         `live()` wrote into the compiled view beside it.
+
+         The bag reaches it as an argument rather than being read inside, so the
+         guard is the argument: it is shared onto views by ShareErrorsFromSession
+         and a package cannot assume the middleware ran -- a Blade::render()
+         outside the web group has no session, and neither does a mail template.
+         `??` does not warn on a variable that was never set. --}}
+    <input {{ $control }}@unblaze($resolved->live()){!! \Onelegstudios\Shape\Control::state($scope, $errors ?? null) !!}@endunblaze />
 @endif

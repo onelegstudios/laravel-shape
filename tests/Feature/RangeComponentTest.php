@@ -154,7 +154,10 @@ it('does not leak the styling props onto the rendered element', function () {
 
     expect(slider($html))
         ->not->toContain('size="lg"')
-        ->not->toContain('invalid');
+        // ` invalid=` rather than `invalid`: the danger classes name the
+        // `invalid:` variant in every control's class list now, and
+        // `aria-invalid` is an attribute this component means to write.
+        ->not->toContain(' invalid=');
 });
 
 describe('the ring', function () {
@@ -255,7 +258,8 @@ describe('invalid', function () {
         seedErrors(['volume' => ['Pick a level.']]);
 
         expect(slider(Blade::render('<shape:range name="volume" />')))
-            ->toContain('focus-visible:thumb:outline-danger-ring');
+            ->toContain('invalid:thumb:outline-danger-ring')
+            ->toContain('aria-invalid="true"');
     });
 
     it('lets the call site mark a field the validator has not seen', function () {
@@ -266,9 +270,13 @@ describe('invalid', function () {
     it('lets the call site clear a field the validator has', function () {
         seedErrors(['volume' => ['Pick a level.']]);
 
+        // `aria-invalid` is the whole of the signal now: the danger classes ride in
+        // every control's class list behind an `invalid:` variant, so what says a
+        // field is wrong is the attribute the variant matches on. Asserting the
+        // absence of a class name here would assert nothing -- it is always there.
         expect(slider(Blade::render('<shape:range name="volume" :invalid="false" />')))
             ->toContain('track:bg-neutral-tint')
-            ->not->toContain('track:bg-danger-tint');
+            ->not->toContain('aria-invalid');
     });
 
     it('stays quiet when there is no bag to read', function () {

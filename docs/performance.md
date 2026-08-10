@@ -148,19 +148,36 @@ cheaper of the two, and it now folds its wrapper as well.
 range and colour input, along with the label and the description. They are compiled by Blaze, but
 with `@blaze` alone.
 
-For the controls the reason is a counter: folding would bake the sequence Shape uses to invent an
-id for a field nobody named, so a loop of unnamed fields would emit the same id and the same
-`for` for every row. They read the error bag as well, to decide whether a control is styled and
-announced as invalid — the same problem the message solves with an island. The message could
-solve it in one place because the bag is the only thing it renders; a control weaves the answer
-into the class on its box, so the same trick would mean holding back the element rather than a
-branch inside it.
+For all of them the obstacle is `@aware`, and it takes two forms.
 
-For the label and the description the reason is `@aware`. Both inherit the field's name, and
-inheritance is resolved from the enclosing tags the compiler can see rather than from the render
-stack — so a `<shape:label>` that folded in a template of its own would lose the `for` it never
-looked up. Left alone they are executed inside a folded field instead, where the stack does
-exist, which is how they end up baked without the hazard.
+The label and the description inherit the field's name, and inheritance is resolved from the
+enclosing tags the compiler can see rather than from the render stack — so a `<shape:label>` that
+folded in a template of its own would lose the `for` it never looked up. Left alone they are
+executed inside a folded field instead, where the stack does exist, which is how they end up
+baked without the hazard.
+
+The controls hit something sharper. Blaze folds an `@aware` component by merging the inherited
+value into the component's own *attribute bag*, and a control's one unanswerable question is
+whether its name was written on the tag or came from the field around it — which is exactly what
+that merge erases. A checkbox in a group would start printing the field's message again under
+every box, and a `wire:model` control would pick up a `name` attribute its binding meant to
+replace. Both are well-formed markup, which is what makes them worth refusing rather than
+shipping.
+
+Two things that *used* to keep the controls out no longer do, and both changed to get them
+closer:
+
+- The error bag is read from an island, the way the message reads it, rather than from a `@php`
+  block. `aria-invalid` and the message's place in `aria-describedby` are settled per render;
+  the colour follows `aria-invalid` through the `invalid:` and `has-invalid:` variants described
+  in [theming](theming.md) instead of being chosen in PHP.
+- The counter behind a generated id is gone. A labelled control that nothing named used to take
+  the next number off a process-wide sequence, which made compiled output depend on the order an
+  application compiled its templates in. It derives from the label now — `label="Email address"`
+  gives `shape-field-email-address` — so the same tag always renders the same id. The cost is
+  that two such controls sharing a label share an id, exactly as two controls sharing a *name*
+  always have; a labelled control with no name, no binding and no id of its own submits nothing
+  either way.
 
 These components share a field name through `@aware`, and the two pipelines compile that
 directive differently: Blaze walks only a component's ancestors where Blade checks the

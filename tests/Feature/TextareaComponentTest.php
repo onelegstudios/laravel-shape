@@ -194,9 +194,13 @@ describe('invalid', function () {
     it('lets the call site clear a field the validator has', function () {
         seedErrors(['bio' => ['Required.']]);
 
+        // `aria-invalid` is the whole of the signal now: the danger classes ride in
+        // every control's class list behind an `invalid:` variant, so what says a
+        // field is wrong is the attribute the variant matches on. Asserting the
+        // absence of a class name here would assert nothing -- it is always there.
         expect(Blade::render('<shape:textarea name="bio" :invalid="false" />'))
             ->toContain('border-neutral-border')
-            ->not->toContain('border-danger-border');
+            ->not->toContain('aria-invalid');
     });
 
     it('stays quiet when there is no bag to read', function () {

@@ -31,12 +31,37 @@
      edit, not this: it would fold where this file calls it, against a stack that
      does not exist yet, and a label would lose the `for` it never looked up.
 
-     Two things this file does not do are what leave it free to fold. It reads no
-     config, so there is no compile-time default to invalidate; and it never spends
-     `Control::$sequence`, which is the counter that keeps the *controls* out --
-     folding one would bake its number and a loop of unnamed fields would answer to
-     a single id. The shorthand reaches this component with every attribute bound,
-     so that path declines and goes on resolving per render. See docs/performance.md. --}}
+     What this file does not do is read `@aware`, and that is the whole of why it
+     may fold where the controls beside it may not.
+
+     Blaze folds an `@aware` component by merging the value it would have inherited
+     into its *attribute bag* -- `Foldable::mergeAwareProps()`, and only where the
+     call site did not write the key itself. For the label and the description that
+     is exactly right: they want the inherited name and do not care where it came
+     from. For a control it is not, because the one question `Control::resolve()`
+     cannot answer any other way is whether the name was written on the tag or
+     inherited from here, and after the merge every control in a group looks as
+     though it named itself. Two things go wrong at once: a checkbox in a group
+     starts printing the field's message again under each box, and a `wire:model`
+     control picks up a `name` attribute the binding meant to replace. Neither is
+     visible in the compiled output -- it is well-formed either way.
+
+     That is what `InvalidBlazeFoldUsageException::forAware()` was written for, and
+     it is defined in Blaze and never called. Until a control can tell the two apart,
+     `fold: true` belongs on this file and not on theirs. docs/performance.md carries
+     the rest.
+
+     Nothing else stands in the way any more, which is worth writing down because it
+     used to. The error bag is read from an island now rather than from a plain PHP
+     block, and the counter behind a generated id is gone -- ids derive from the
+     label. Both of those were blockers here and are not.
+
+     One mechanical note, since this block was briefly the thing that broke the
+     fold. Folding pre-processes the raw source before Blade strips comments, and
+     raw-block directives are taken out earlier still -- so a directive name written
+     with its at-sign in prose here is matched as the real thing and pairs itself
+     with the next real one, swallowing the component. Name them without the sign,
+     as above. --}}
 
 @props([
     'name' => null,

@@ -139,8 +139,13 @@ describe('the box', function () {
     });
 
     it('rings on the keyboard rather than on every click', function () {
+        // The width is what carries the state -- `outline-width` is zero until
+        // `focus-visible:outline-2` sets it -- so the colour beside it rides
+        // unvariant. It moved there when the danger half became a CSS variant:
+        // the two have to stay one variant apart for `invalid:` to win cleanly.
         expect(dial(Blade::render('<shape:radio />')))
-            ->toContain('focus-visible:outline-neutral-ring')
+            ->toContain('focus-visible:outline-2')
+            ->toContain('outline-neutral-ring')
             ->not->toContain('focus-within:');
     });
 

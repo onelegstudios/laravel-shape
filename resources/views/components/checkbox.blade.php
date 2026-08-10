@@ -2,7 +2,10 @@
 
 {{-- `@blaze` with the rest of the family: they move as a unit so no `@aware`
      boundary is ever mixed, and the bag is saved and restored around `@aware` for
-     the reason input.blade.php spells out. See the top of field.blade.php. --}}
+     the reason input.blade.php spells out. See the top of field.blade.php.
+
+     No `fold`, and what stands in the way is `@aware` rather than anything in this
+     file -- the block at the top of field.blade.php has it. --}}
 
 @props([
     'label' => null,
@@ -51,13 +54,11 @@
         attributes: $attributes,
         name: $name,
         invalid: $invalid,
-        errors: $errors ?? null,
         option: $attributes->get('value'),
-        chrome: $chrome,
+        label: $chrome ? $label : null,
         description: $description !== null,
+        message: $chrome,
     );
-
-    $bad = $resolved->invalid;
 
     // Four rungs on both halves of the row, resolved once so the box, the mark and
     // the words cannot get out of step.
@@ -142,7 +143,7 @@
         <x-shape::checkbox
             {{ $attributes->merge($resolved->forward()) }}
             :size="$size"
-            :invalid="$bad"
+            :invalid="$invalid"
         />
 
         <div class="flex flex-col gap-1">
@@ -224,9 +225,18 @@
         // nothing else here touches.
         $control = 'peer col-start-1 row-start-1 appearance-none rounded-sm border bg-surface transition-colors checked:border-primary-fill checked:bg-primary-fill indeterminate:border-primary-fill indeterminate:bg-primary-fill focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
-        $ring = $bad
-            ? 'border-danger-border focus-visible:outline-danger-ring'
-            : 'border-neutral-border focus-visible:outline-neutral-ring';
+        // Both states in one string, chosen by CSS rather than by a branch here.
+        // This component folds -- it is evaluated once, when the view is compiled --
+        // so a branch on the error bag would freeze whatever the validator happened
+        // to be saying then. `invalid:` reads it off the control on render instead;
+        // see the variant block in shape.css.
+        //
+        // The ring colour is unvariant where it used to sit behind the focus state.
+        // It costs nothing, since `outline-width` is zero until the focus rule above
+        // sets it, and it keeps the pair one variant apart so which of them wins is
+        // Tailwind's plainest ordering rule rather than a question about how deeply
+        // stacked variants sort.
+        $ring = 'border-neutral-border outline-neutral-ring invalid:border-danger-border invalid:outline-danger-ring';
 
         // Both marks sit in the cell whether or not they are showing, and the
         // control is a `peer` so its state decides which one does.
@@ -234,14 +244,31 @@
 
         $cell = $attributes->only('class')->merge(['class' => $cell]);
 
-        $control = $attributes->except('class')->merge(array_merge(
+        // `aria-describedby` leaves the bag because the island below writes it: the
+        // list is settled here, but whether the message joins it is not, and one
+        // element cannot carry the attribute twice. `Control::resolve()` has already
+        // read the caller's own value, so nothing written at the call site is lost.
+        $control = $attributes->except(['class', 'aria-describedby'])->merge(array_merge(
             ['type' => 'checkbox', 'class' => $control.' '.$boxes[$rung].' '.$ring],
             $resolved->attributes(),
         ));
     @endphp
 
     <span {{ $cell }}>
-        <input {{ $control }} />
+        {{-- The island, and the only thing in this component that is not settled by
+             the time the view is compiled. `aria-invalid` is what says the value is
+             wrong -- to a screen reader, and to the variant that colours the control
+             -- and whether the message joins `aria-describedby` depends on the same
+             read. Folding evaluates this file once, so both are held back rather
+             than baked; `Control::state()` weighs them per render against the array
+             `live()` wrote into the compiled view beside it.
+
+             The bag reaches it as an argument rather than being read inside, so the
+             guard is the argument: it is shared onto views by ShareErrorsFromSession
+             and a package cannot assume the middleware ran -- a Blade::render()
+             outside the web group has no session, and neither does a mail template.
+             `??` does not warn on a variable that was never set. --}}
+        <input {{ $control }}@unblaze($resolved->live()){!! \Onelegstudios\Shape\Control::state($scope, $errors ?? null) !!}@endunblaze />
 
         {{-- Hidden from assistive tech by the icon component's own default, which is
              right: what a reader is told is the control's checked state, and the mark

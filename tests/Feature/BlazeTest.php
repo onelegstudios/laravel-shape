@@ -491,19 +491,20 @@ describe('the field', function () {
             ->not->toContain('[BlazeFolded]:{shape::field}');
     });
 
-    it('gives every iteration of a folded field its own generated id', function () {
-        // `Control::$sequence` is what keeps the controls out of the fold, and a
-        // folded wrapper must not drag one in behind it. The control here is in the
-        // slot, so it is restored rather than evaluated -- three renders, three
-        // numbers.
+    it('pairs the label and the control in every iteration of a folded field', function () {
+        // A folded wrapper must not leave the control inside it pointing somewhere
+        // else. The ids repeat across the rows -- the label they derive from repeats
+        // too, which the loop block at the foot of this file sets out -- so what is
+        // asserted here is the pairing rather than the count.
         $html = Blade::render(
             '@foreach ([1, 2, 3] as $row)<shape:field><shape:input label="Email" /></shape:field>@endforeach',
         );
 
-        preg_match_all('/id="(shape-field-\d+)"/', $html, $matches);
+        preg_match_all('/for="([^"]+)"/', $html, $labels);
+        preg_match_all('/id="([^"]+)"/', $html, $controls);
 
-        expect($matches[1])->toHaveCount(3)
-            ->and(array_unique($matches[1]))->toHaveCount(3);
+        expect($labels[1])->toHaveCount(3)
+            ->and($labels[1])->toBe($controls[1]);
     });
 });
 
@@ -561,16 +562,15 @@ describe('a control repeated in a loop', function () {
     // folded component is evaluated once and its markup written into the calling
     // template, so anything derived per render is derived once and then repeated.
     //
-    // `Control::resolve()` derives exactly one such thing. A labelled control with
-    // no name has nothing to build an id from, so it takes the next number off a
-    // process-wide counter -- and a folded loop would take one number and hand it to
-    // every row, leaving a page of duplicate ids and a column of labels that all
-    // click through to the first control.
+    // This block used to assert the opposite of what it asserts now, and the
+    // inversion is the point rather than a regression to be embarrassed about. A
+    // labelled control that nothing named took the next number off a process-wide
+    // counter, which gave a loop three ids -- but only because the component was
+    // re-entered per row. Folded, the counter is read once and every row carries the
+    // same number, and *which* number depends on what the application happened to
+    // compile first. So the counter went, and the id is derived from the label.
     //
-    // The family is compiled rather than folded today, so these pass as written.
-    // They are here for the day `fold: true` reaches it, because nothing about the
-    // markup looks wrong when it breaks: the ids are well-formed, the labels are
-    // paired, and only the repetition gives it away.
+    // What is asserted here is what that bought and what it cost, in that order.
 
     // These render rather than compile, and some of these controls draw a mark of
     // their own -- the select its chevron, the checkbox its tick. The file's own
@@ -580,13 +580,17 @@ describe('a control repeated in a loop', function () {
     // own.
     beforeEach(fn () => publishRequiredIcons());
 
-    it('gives every iteration a generated id of its own', function (string $tag) {
+    it('derives the same id for every iteration', function (string $tag) {
+        // The cost, stated plainly. Three unnamed controls with one label between
+        // them are one id, which is what three controls *named* the same way have
+        // always been -- and a labelled control with no name, no binding and no id
+        // submits nothing whether or not its id is unique. See docs/performance.md.
         $html = Blade::render('@foreach ([1, 2, 3] as $row)'.$tag.'@endforeach');
 
-        preg_match_all('/id="(shape-field-\d+)"/', $html, $matches);
+        preg_match_all('/id="(shape-field-[\w-]+)"/', $html, $matches);
 
         expect($matches[1])->toHaveCount(3)
-            ->and(array_unique($matches[1]))->toHaveCount(3);
+            ->and(array_unique($matches[1]))->toHaveCount(1);
     })->with([
         'the input' => ['<shape:input label="Email" />'],
         'the select' => ['<shape:select label="Plan" />'],
@@ -599,24 +603,42 @@ describe('a control repeated in a loop', function () {
         'the colour input' => ['<shape:color label="Brand" />'],
     ]);
 
-    it('points every label at the control beside it', function () {
-        // Distinct ids are only half the claim. The id exists so that a `<label>` has
-        // something to name, so the pairing is the part worth asserting: three `for`
-        // values in document order, each naming the control in its own iteration
-        // rather than all three naming the first.
-        //
-        // Distinctness is asserted here too, and not as a repeat of the test above.
-        // A frozen counter hands the same id to the label and to the control, so the
-        // two lists match each other exactly while every row points at the first --
-        // pairing alone is satisfied by the failure it is meant to catch.
+    it('gives every iteration of a named control an id of its own', function () {
+        // The case that matters and the one that did not change: a control with a
+        // name derives from the name, and a loop of *different* names is a loop of
+        // different ids however the component was compiled.
+        $html = Blade::render('@foreach ([1, 2, 3] as $row)<shape:input label="Email" name="row-{{ $row }}" />@endforeach');
+
+        preg_match_all('/id="([^"]+)"/', $html, $matches);
+
+        expect($matches[1])->toBe(['row-1', 'row-2', 'row-3']);
+    });
+
+    it('points every label at a control that is on the page', function () {
+        // The id exists so a `<label>` has something to name, so the pairing is the
+        // part worth asserting whichever way the ids come out: three `for` values,
+        // each naming an id something rendered.
         $html = Blade::render('@foreach ([1, 2, 3] as $row)<shape:input label="Email" />@endforeach');
 
         preg_match_all('/for="([^"]+)"/', $html, $labels);
         preg_match_all('/id="([^"]+)"/', $html, $controls);
 
         expect($labels[1])->toHaveCount(3)
-            ->and($labels[1])->toBe($controls[1])
-            ->and(array_unique($labels[1]))->toHaveCount(3);
+            ->and($labels[1])->toBe($controls[1]);
+    });
+
+    it('answers the same whether the row folded or not', function () {
+        // What deriving bought. The counter made a compiled view depend on the order
+        // the application compiled its templates in; a label does not, so the folded
+        // call site and the one that declined agree -- which is also what makes the
+        // benchmark's byte-for-byte comparison across modes mean anything.
+        $folded = Blade::render('<shape:input label="Email" />');
+        $declined = Blade::render('<shape:input :label="\'Email\'" />');
+
+        preg_match('/id="([^"]+)"/', $folded, $a);
+        preg_match('/id="([^"]+)"/', $declined, $b);
+
+        expect($a[1])->toBe('shape-field-email')->and($b[1])->toBe($a[1]);
     });
 });
 
