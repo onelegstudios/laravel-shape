@@ -117,19 +117,50 @@ them at the call site rather than through config.
 `memo`, Blaze's third strategy, is unused: it keys on the call site alone and only covers
 components without slots, which a button is not.
 
+## A field folds when you write it out
+
+The [field](components/field.md) folds too, and folding it takes the label, the description and
+the legend with it — none of which carry the directive themselves. A fold *renders* the
+component, so everything the field draws is executed at compile time and written into your
+template as plain HTML:
+
+```blade
+<shape:field name="email" label="Email">
+    <shape:input />
+</shape:field>
+```
+
+compiles the `<div>` and the `<label for="email">` to literal markup. The control in the slot is
+left as a call — it reads the error bag and may need an id of its own — and so is the message,
+which keeps its island.
+
+**The shorthand does not fold**, and that is the ceiling on this. `<shape:input label="Email">`
+builds its field by passing values `Control::resolve()` settles at render, so the call is bound
+and declines. On a page of hand-written fields folding the wrapper is worth about a fifth of the
+render; on a page of shorthand it is worth nothing.
+
+That sharpens the advice below rather than changing it: writing a field out was already the
+cheaper of the two, and it now folds its wrapper as well.
+
 ## What does not fold, and why
 
-**The rest of the field components do not fold**, and the reason is a counter rather than config.
-Every control (the input, select, textarea, checkbox, radio and file input), along with the
-[field](components/field.md), the label and the description, is compiled by Blaze — but with
-`@blaze` alone. Folding would bake the sequence Shape uses to invent an id for a field nobody
-named, so a loop of unnamed fields would emit the same id and the same `for` for every row.
+**The controls do not fold** — the input, select, textarea, checkbox, radio, file input, switch,
+range and colour input, along with the label and the description. They are compiled by Blaze, but
+with `@blaze` alone.
 
-They read the error bag as well, to decide whether a control is styled and announced as invalid,
-which is the same problem the message above solves with an island. The message could solve it in
-one place because the bag is the only thing it renders; a control weaves the answer through the
-class on its box, so the same trick would mean holding back the element rather than a branch
-inside it.
+For the controls the reason is a counter: folding would bake the sequence Shape uses to invent an
+id for a field nobody named, so a loop of unnamed fields would emit the same id and the same
+`for` for every row. They read the error bag as well, to decide whether a control is styled and
+announced as invalid — the same problem the message solves with an island. The message could
+solve it in one place because the bag is the only thing it renders; a control weaves the answer
+into the class on its box, so the same trick would mean holding back the element rather than a
+branch inside it.
+
+For the label and the description the reason is `@aware`. Both inherit the field's name, and
+inheritance is resolved from the enclosing tags the compiler can see rather than from the render
+stack — so a `<shape:label>` that folded in a template of its own would lose the `for` it never
+looked up. Left alone they are executed inside a folded field instead, where the stack does
+exist, which is how they end up baked without the hazard.
 
 These components share a field name through `@aware`, and the two pipelines compile that
 directive differently: Blaze walks only a component's ancestors where Blade checks the
@@ -140,7 +171,8 @@ bag and puts it back around the directive. But it is why the family moves togeth
 adding `@blaze` to one of them on its own is not a safe edit.
 
 If you are rendering hundreds of fields in a loop, the shorthand is still the thing to drop
-first — it is five components where the bare `<shape:input>` is two.
+first — it is five components where the bare `<shape:input>` is two, and writing the field out
+folds the wrapper on top of that.
 
 Nothing stops you enabling either for your own components, and Blaze can be turned off entirely
 with `BLAZE_ENABLED=false` if you want to compare.

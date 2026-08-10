@@ -1,4 +1,4 @@
-@blaze
+@blaze(fold: true)
 
 {{-- `@blaze` on every member of this family, and the whole family together, which
      is the part that matters: `@aware` reads the render stack, so a field compiled
@@ -20,10 +20,23 @@
      first; input.blade.php carries that explanation, being the file with the
      sharpest version of it.
 
-     No `fold` here, and not because it is unavailable -- `InvalidBlazeFoldUsageException::forAware()`
-     is defined in Blaze and never called. It is off because folding bakes
-     `Control::$sequence` into the compiled view, so unnamed fields in a loop would
-     all answer to one id. See docs/performance.md. --}}
+     `fold: true` here and nowhere else in the family, and what makes it safe is the
+     one thing about folding that is easy to get backwards: a fold *renders* the
+     component, so the components this file calls are executed rather than left
+     standing. The label, the description, the legend and the message are baked into
+     the caller's template by folding this file, without any of them carrying
+     `fold: true` themselves -- and while they run, `BladeRenderer` has this
+     component's attributes on the runtime data stack, so their `@aware` resolves the
+     way it does at render. Giving one of them the directive of its own is the unsafe
+     edit, not this: it would fold where this file calls it, against a stack that
+     does not exist yet, and a label would lose the `for` it never looked up.
+
+     Two things this file does not do are what leave it free to fold. It reads no
+     config, so there is no compile-time default to invalidate; and it never spends
+     `Control::$sequence`, which is the counter that keeps the *controls* out --
+     folding one would bake its number and a loop of unnamed fields would answer to
+     a single id. The shorthand reaches this component with every attribute bound,
+     so that path declines and goes on resolving per render. See docs/performance.md. --}}
 
 @props([
     'name' => null,

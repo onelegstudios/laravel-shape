@@ -1,10 +1,16 @@
-@blaze
+@blaze(fold: true)
 
-{{-- `@blaze`, and here alone in this family it never needed the argument. The
-     legend has no `@aware` -- a `<legend>` names the fieldset it opens by sitting
-     in it, so there is nothing to inherit and nothing to point at -- and so no bag
-     to save and restore either. It moves with the family because the field renders
-     it and the two are read together. See the top of field.blade.php. --}}
+{{-- `@blaze`, and here alone in this family it never needed the save-and-restore.
+     The legend has no `@aware` -- a `<legend>` names the fieldset it opens by
+     sitting in it, so there is nothing to inherit and nothing to point at -- and so
+     no bag to put back either. It moves with the family because the field renders
+     it and the two are read together. See the top of field.blade.php.
+
+     Having no `@aware` is also what lets it take `fold: true` on its own terms
+     rather than only through a folded field. Everything it decides comes from one
+     prop and a closed table, so a call site that names its rung as a literal is
+     answerable at compile time wherever it stands -- which is not true of the label
+     or the description beside it, and is the whole of the difference. --}}
 
 @props(['size' => null])
 

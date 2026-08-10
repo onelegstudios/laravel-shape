@@ -222,16 +222,16 @@ it('compiles the field and header families through blaze', function (string $tag
     // slipping out is invisible -- the markup still renders, it just wires itself
     // to the wrong field.
     //
-    // `[BlazeFolded]` is asserted absent on every case as well. Folding this family
-    // is a separate decision with its own hazards (Control::$sequence bakes its
-    // counter, so unnamed fields in a loop would share an id), and this is what
-    // stops `fold: true` arriving on one of these files without that argument being
-    // made. See docs/performance.md.
+    // `[BlazeFolded]` is asserted absent on every case as well. Folding a control
+    // is a separate decision with its own hazards -- `Control::$sequence` bakes its
+    // counter, so unnamed fields in a loop would share an id, and the error bag is
+    // read straight into the class on the box -- and this is what stops `fold: true`
+    // arriving on one of these files without that argument being made. See
+    // docs/performance.md.
     //
-    // The message is the one member that has made it, and it is absent from the
-    // list below rather than exempted here -- it has a describe block of its own
-    // further down. Nothing else in the family may join it without landing there
-    // too.
+    // Three members have left this list rather than being exempted inside it: the
+    // message, the field and the legend each have a describe block of their own
+    // further down. Nothing else may join them without landing there too.
     expect(Blade::compileString($tag))
         ->toContain('$__blaze')
         ->not->toContain('renderComponent')
@@ -246,12 +246,7 @@ it('compiles the field and header families through blaze', function (string $tag
     'the switch' => ['<shape:switch name="notify" />'],
     'the range' => ['<shape:range name="volume" />'],
     'the colour input' => ['<shape:color name="brand" />'],
-    'the field' => ['<shape:field name="email"><shape:input /></shape:field>'],
-    'the field as a group' => ['<shape:field name="plan" legend="Plan"><shape:radio value="free" /></shape:field>'],
     'the label' => ['<shape:label>Email</shape:label>'],
-    // The one member with no `@aware` of its own, so it moves with the family as a
-    // choice rather than a constraint -- pinned here so it stays one.
-    'the legend' => ['<shape:legend>Plan</shape:legend>'],
     'the description' => ['<shape:description>Help</shape:description>'],
     // The affix pair is the case that had a reason of its own to stay behind, set
     // out at the top of input/prefix.blade.php: the input renders them from inside
@@ -407,6 +402,119 @@ describe('the error message', function () {
         expect($compiled)->toContain('[BlazeFolded]:{shape::error}')
             ->not->toContain('<p');
     });
+});
+
+describe('the field', function () {
+    // The wrapper folds; the controls do not. What makes that safe is the thing
+    // about folding that is easiest to get backwards -- a fold *renders* the
+    // component, so everything the field calls is executed rather than left
+    // standing, and while it runs BladeRenderer has the field's attributes on the
+    // runtime data stack. The label and the description resolve their `@aware`
+    // against that stack and come out as literal HTML, without either file carrying
+    // `fold: true` of its own. Giving one of them the directive is the unsafe edit,
+    // which is why they are still in the list above.
+    beforeEach(fn () => publishRequiredIcons());
+
+    it('folds a call site whose attributes are all literals', function () {
+        $compiled = Blade::compileString(
+            '<shape:field name="email" label="Email" description="We never share it."><shape:input /></shape:field>',
+        );
+
+        expect($compiled)
+            ->toContain('[BlazeFolded]:{shape::field}')
+            // The wrapper, and the two parts the field drew for itself, baked.
+            ->toContain('<div class="flex flex-col gap-1.5">')
+            ->toContain('<label class="text-sm font-medium text-ink" for="email">Email</label>')
+            ->toContain('id="email-description"');
+    });
+
+    it('resolves the label it bakes against the field it is standing in', function () {
+        // The claim the assertion above rests on, stated on its own because it is
+        // the whole reason the label may not fold by itself. `for="email"` is not in
+        // the markup anywhere -- the label derived it from a name it read off the
+        // stack, at compile time, inside the fold.
+        expect(Blade::render('<shape:field name="email" label="Email"><shape:input /></shape:field>'))
+            ->toContain('for="email"')
+            ->toContain('id="email"');
+    });
+
+    it('leaves the control in its slot to render', function () {
+        // A slot is restored rather than evaluated, so the control inside a folded
+        // field is still a call -- which is what it has to be: it reads the error
+        // bag and may spend a generated id.
+        $compiled = Blade::compileString('<shape:field name="email"><shape:input /></shape:field>');
+
+        expect($compiled)->toContain('[BlazeFolded]:{shape::field}')
+            ->toContain('input.blade.php')
+            // And the wrapper pushes its data back, so the control's `@aware` finds
+            // the name at render even though the component around it is gone.
+            ->toContain("pushConsumableComponentData(['name' => 'email'");
+    });
+
+    it('carries a name through the fold to a control that never wrote one', function () {
+        // The rendered half of the line above, and the one that would fail silently:
+        // a folded wrapper that dropped its data would leave the control unnamed and
+        // the form submitting nothing.
+        expect(Blade::render('<shape:field name="email"><shape:input /></shape:field>'))
+            ->toContain('name="email"');
+    });
+
+    it('reads the bag on every render of a field it has already folded', function () {
+        // The message inside a folded field is the island stage 1 put there, and
+        // this is the case it was built for: the field around it is gone, so the
+        // island is now inline in the calling view.
+        seedErrors(['email' => ['The email field is required.']]);
+
+        $first = Blade::render('<shape:field name="email" label="Email"><shape:input /></shape:field>');
+
+        seedErrors(['email' => ['That address is already taken.']]);
+
+        expect($first)->toContain('The email field is required.')
+            ->and(Blade::render('<shape:field name="email" label="Email"><shape:input /></shape:field>'))
+            ->toContain('That address is already taken.')
+            ->not->toContain('The email field is required.');
+    });
+
+    it('declines to fold the field the shorthand builds', function () {
+        // The path that matters most and folds least. `<shape:input label="...">`
+        // expands into a field, and every attribute it hands over is settled by
+        // `Control::resolve()` at render -- so the call is bound, the fold declines,
+        // and the sequence behind a generated id is spent per row as it always was.
+        // Stated here because it is the ceiling on what folding the wrapper buys.
+        expect(Blade::compileString('<shape:input name="email" label="Email" />'))
+            ->not->toContain('[BlazeFolded]:{shape::field}')
+            ->toContain('$__blaze');
+    });
+
+    it('declines to fold a field whose props are bound', function () {
+        expect(Blade::compileString('<shape:field :name="$field" label="Email"><shape:input /></shape:field>'))
+            ->not->toContain('[BlazeFolded]:{shape::field}');
+    });
+
+    it('gives every iteration of a folded field its own generated id', function () {
+        // `Control::$sequence` is what keeps the controls out of the fold, and a
+        // folded wrapper must not drag one in behind it. The control here is in the
+        // slot, so it is restored rather than evaluated -- three renders, three
+        // numbers.
+        $html = Blade::render(
+            '@foreach ([1, 2, 3] as $row)<shape:field><shape:input label="Email" /></shape:field>@endforeach',
+        );
+
+        preg_match_all('/id="(shape-field-\d+)"/', $html, $matches);
+
+        expect($matches[1])->toHaveCount(3)
+            ->and(array_unique($matches[1]))->toHaveCount(3);
+    });
+});
+
+it('folds the legend, which inherits nothing and so needs no field to see it', function () {
+    // The one member of the family with no `@aware` at all, which is what lets it
+    // fold standing on its own rather than only inside a folded field. Everything it
+    // decides comes from one prop and a closed table.
+    expect(Blade::compileString('<shape:legend>Plan</shape:legend>'))
+        ->toContain('[BlazeFolded]:{shape::legend}')
+        ->toContain('<legend class="mb-1.5 text-sm font-medium text-ink">')
+        ->not->toContain('renderComponent');
 });
 
 it('folds the heading, which is the one component outside both families', function () {
