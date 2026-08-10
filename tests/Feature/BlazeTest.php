@@ -227,6 +227,11 @@ it('compiles the field and header families through blaze', function (string $tag
     // counter, so unnamed fields in a loop would share an id), and this is what
     // stops `fold: true` arriving on one of these files without that argument being
     // made. See docs/performance.md.
+    //
+    // The message is the one member that has made it, and it is absent from the
+    // list below rather than exempted here -- it has a describe block of its own
+    // further down. Nothing else in the family may join it without landing there
+    // too.
     expect(Blade::compileString($tag))
         ->toContain('$__blaze')
         ->not->toContain('renderComponent')
@@ -248,7 +253,6 @@ it('compiles the field and header families through blaze', function (string $tag
     // choice rather than a constraint -- pinned here so it stays one.
     'the legend' => ['<shape:legend>Plan</shape:legend>'],
     'the description' => ['<shape:description>Help</shape:description>'],
-    'the error' => ['<shape:error name="email" />'],
     // The affix pair is the case that had a reason of its own to stay behind, set
     // out at the top of input/prefix.blade.php: the input renders them from inside
     // its own template, where the component stack has already been popped, and only
@@ -269,6 +273,141 @@ it('compiles the field and header families through blaze', function (string $tag
     'the nav' => ['<shape:header.nav>Links</shape:header.nav>'],
     'the item' => ['<shape:header.item href="/">Docs</shape:header.item>'],
 ]);
+
+describe('the error message', function () {
+    // The one member of the field family that folds, and the only component in the
+    // package whose correctness turns on an island rather than on an optimisation
+    // the island happens to protect. The button's translated label would have been
+    // wrong in one locale; a baked message is wrong in every request that has one.
+    //
+    // These render as well as compile, so the mark has to be on disk.
+    beforeEach(fn () => publishRequiredIcons());
+
+    it('folds the call site and leaves the bag read at render time', function () {
+        $compiled = Blade::compileString('<shape:error name="email" />');
+
+        expect($compiled)
+            ->toContain('[BlazeFolded]:{shape::error}')
+            ->not->toContain('renderComponent')
+            // What the fold settled: the name it resolved and the id derived from
+            // it, written into the compiled view as literals.
+            ->toContain("'field' => 'email'")
+            ->toContain('id="email-error"')
+            // And what it did not: the lookup itself, which survives as a call.
+            ->toContain('$errors->has($scope[\'field\'])');
+    });
+
+    it('reads the bag again on every render of a message it has already folded', function () {
+        // The test above proves the call survived compilation. This one proves it is
+        // still being made, which is the claim that actually matters and the one a
+        // single render cannot support: a baked message satisfies every assertion
+        // about the first render and fails only on the second. The button's locale
+        // test is the same shape, for the same reason.
+        seedErrors(['email' => ['The email field is required.']]);
+
+        $first = Blade::render('<shape:error name="email" />');
+
+        seedErrors(['email' => ['That address is already taken.']]);
+
+        expect($first)->toContain('The email field is required.')
+            ->and(Blade::render('<shape:error name="email" />'))
+            ->toContain('That address is already taken.')
+            ->not->toContain('The email field is required.');
+    });
+
+    it('renders nothing for a clean field it has already folded', function () {
+        // The other half of the same claim, and the one a baked message passes by
+        // accident: an element that folded to nothing would satisfy this whatever
+        // the bag said.
+        seedErrors(['email' => ['The email field is required.']]);
+
+        expect(Blade::render('<shape:error name="email" />'))->toContain('<p');
+
+        seedErrors(['other' => ['Something else went wrong.']]);
+
+        expect(trim(Blade::render('<shape:error name="email" />')))->toBe('');
+    });
+
+    it('folds a message that inherits its name from a field in the same template', function () {
+        // `@aware` reads the render stack, which does not exist when a fold runs.
+        // What Blaze consults instead is the enclosing component *nodes* of the
+        // template it is compiling -- so an inherited name folds correctly exactly
+        // when it is written where the compiler can see it, which is what this pins.
+        expect(Blade::compileString('<shape:field name="email"><shape:error /></shape:field>'))
+            ->toContain('[BlazeFolded]:{shape::error}')
+            ->toContain("'field' => 'email'");
+    });
+
+    it('leaves the message a field draws for itself unfolded', function () {
+        // The other side of the rule above, and the reason field.blade.php binds
+        // `:name` on a message it renders itself. Inside that file the message sits
+        // in plain markup with no component node above it, so a bare tag would fold
+        // against a name of null and every composed field would carry a message that
+        // had decided at compile time it had nothing to say. Bound, it declines.
+        //
+        // Asserted on the component's own source rather than through a call site,
+        // because that is where the hazard is: the fold would happen when this file
+        // is compiled, not when something calls it.
+        expect(Blade::compileString(shapeFile('resources/views/components/field.blade.php')))
+            ->not->toContain('[BlazeFolded]:{shape::error}');
+    });
+
+    it('declines to fold a message that says something of its own', function () {
+        // A call site with words of its own never reads the bag, so it could fold in
+        // principle. What stops it is that the test telling the two apart is
+        // `trim((string) $slot)`, and a folded slot is a placeholder standing in for
+        // content that has not been restored yet -- so the blank case below would
+        // read as written and print an empty red row on every render. That is the
+        // divergence the button's `square` prop exists for, and `unsafe: ['*']` is
+        // what keeps this file from needing one: it counts children rather than
+        // weighing them, which a narrower `unsafe: ['slot']` does not.
+        $written = Blade::compileString('<shape:error name="email">That address is taken.</shape:error>');
+
+        $blank = Blade::compileString("<shape:error name=\"email\">\n</shape:error>");
+
+        expect($written)->not->toContain('[BlazeFolded]:{shape::error}')
+            ->and($blank)->not->toContain('[BlazeFolded]:{shape::error}');
+
+        // Both still render what they always did: the words for one, the validator's
+        // sentence for the other.
+        seedErrors(['email' => ['The email field is required.']]);
+
+        expect(Blade::render('<shape:error name="email">That address is taken.</shape:error>'))
+            ->toContain('That address is taken.')
+            ->not->toContain('The email field is required.');
+
+        expect(Blade::render("<shape:error name=\"email\">\n</shape:error>"))
+            ->toContain('The email field is required.');
+    });
+
+    it('declines to fold a message whose name is bound', function () {
+        // `name` is read off the bag rather than declared as a prop, because a name
+        // written here has to beat the field's -- so Blaze sees pass-through and
+        // would otherwise let a bound one fold. It would not survive: `Fields::id()`
+        // rewrites the placeholder's underscores on the way to the id, and what
+        // reaches the browser is a mangled placeholder sitting in an `id`.
+        $compiled = Blade::compileString('<shape:error :name="$field" />');
+
+        expect($compiled)->not->toContain('[BlazeFolded]:{shape::error}')
+            ->not->toContain('BLAZE-PLACEHOLDER')
+            ->toContain('$__blaze');
+    });
+
+    it('folds a message with no name to nothing at all', function () {
+        // Correct rather than merely cheap: a message that cannot name a field has
+        // nothing to look up, and renders nothing today for the same reason.
+        //
+        // It is also the shape of the one limitation folding this component adds. An
+        // inherited name has to be visible to the compiler, so a bare tag whose
+        // field lives in another template -- across an `@include`, say -- folds to
+        // this rather than to the message it would have found at render. See
+        // docs/performance.md.
+        $compiled = Blade::compileString('<shape:error />');
+
+        expect($compiled)->toContain('[BlazeFolded]:{shape::error}')
+            ->not->toContain('<p');
+    });
+});
 
 it('folds the heading, which is the one component outside both families', function () {
     // Not in the list above, and pinned so the family's save-and-restore idiom does
@@ -408,6 +547,18 @@ it('gives up the fold on a statically loading button once blaze has a warm scrat
     expect(Blade::compileString('<shape:button loading>Save</shape:button>'))
         ->toContain('[BlazeFolded]');
 
+    // Snapshotted before the flush and put back after it, which is the difference
+    // between simulating a cold process and poisoning the one this suite is running
+    // in. `BladeRenderer::render()` reaches its scratch file with `require_once`, so
+    // a path included once in a process keeps the function body it was included
+    // with -- and the hook above deletes that directory between tests, which makes
+    // every later fold recompile the file, mint fresh tokens, and then run the old
+    // body emitting the old ones. Those still resolve while the map holds them.
+    // Flushed and left flushed, they do not, and every island in the file starts
+    // declining depending on the order the tests happened to run in.
+    $replacements = Unblaze::$unblazeReplacements;
+    $scopes = Unblaze::$unblazeScopes;
+
     // What a new process sees: the scratch file still on disk, the token map empty.
     Unblaze::flushState();
 
@@ -418,4 +569,7 @@ it('gives up the fold on a statically loading button once blaze has a warm scrat
     // The button with no island in its output is untouched by any of it.
     expect(Blade::compileString('<shape:button>Save</shape:button>'))
         ->toContain('[BlazeFolded]');
+
+    Unblaze::$unblazeReplacements = $replacements;
+    Unblaze::$unblazeScopes = $scopes;
 });

@@ -154,8 +154,20 @@
             @endif
 
             {{-- Unguarded, because a named legend is already one of the chrome
-                 props: `$group` cannot be true where `$chrome` is false. --}}
-            <x-shape::error />
+                 props: `$group` cannot be true where `$chrome` is false.
+
+                 `:name` rather than leaving it to `@aware`, which is a requirement
+                 rather than a courtesy since the message started folding. `@aware`
+                 reads the render stack, and folding runs before there is one: what
+                 Blaze consults instead is the enclosing component *nodes* in the
+                 template it is compiling, and in this file the message has none --
+                 it sits inside plain markup. Left bare it would fold here, at this
+                 file's compile time, against a name of null, and every composed
+                 field would carry a message that had already decided it had nothing
+                 to say. Bound, the fold declines and the component renders as it
+                 always did. The checkbox and the switch pass their own for the same
+                 reason. --}}
+            <x-shape::error :name="$field" />
         </div>
     </fieldset>
 @else
@@ -174,8 +186,9 @@
             <x-shape::description :id="$trailingId">{{ $descriptionTrailing }}</x-shape::description>
         @endif
 
+        {{-- `:name` for the reason the group branch above spells out. --}}
         @if ($chrome)
-            <x-shape::error />
+            <x-shape::error :name="$field" />
         @endif
     </div>
 @endif

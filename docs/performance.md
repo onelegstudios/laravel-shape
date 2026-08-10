@@ -49,6 +49,47 @@ translation resolved at compile time would serve one locale to everybody — so 
 held back to render time and its spinner does not fold. It only exists while the button is busy,
 and the usual `:loading="$saving"` is a dynamic prop that declines to fold anyway.
 
+## The validation message folds, and reads the bag anyway
+
+The [error](components/field.md) is the one field component that folds, and it is the only one
+whose correctness depends on that being done carefully. What the validator said is the most
+per-request thing in the package, and so is whether it said anything at all — a folded copy
+evaluated once at compile time, when no error bag exists, would report every field clean for
+ever, with markup that looks perfectly correct.
+
+So the whole element, not just the sentence inside it, is held back to render time in an island.
+The name and the id are settled when the view is compiled; the lookup happens on every render, as
+it always did. Blaze enforces the split rather than trusting it: a component that reads the error
+bag outside an island is refused the fold outright.
+
+Three shapes of call site decline the fold instead, and all three still render exactly what they
+rendered before:
+
+```blade
+<shape:error name="email">That address is taken.</shape:error>  {{-- words of its own --}}
+<shape:error :name="$field" />                                  {{-- a bound name --}}
+<shape:error name="email"></shape:error>                        {{-- anything in the slot --}}
+```
+
+One limitation comes with it. A message with no name of its own takes one from the field around
+it, and that inheritance is resolved when the view is compiled — so the enclosing
+`<shape:field>` has to be visible in the same template:
+
+```blade
+{{-- Folds, and finds `email`. --}}
+<shape:field name="email">
+    <shape:error />
+</shape:field>
+
+{{-- Folds against no name at all, and renders nothing. --}}
+<shape:field name="email">
+    @include('partials.control')  {{-- a bare <shape:error /> in here --}}
+</shape:field>
+```
+
+Give the message a name of its own if you need to split a field across templates — a bound
+`:name` declines the fold, and a literal one folds correctly.
+
 ## The config file is read when a view is compiled
 
 This is the one thing folding the button changed about how it behaves, and it is worth being
@@ -78,12 +119,17 @@ components without slots, which a button is not.
 
 ## What does not fold, and why
 
-**The field components do not fold**, and the reason is a counter rather than config. Every
-control (the input, select, textarea, checkbox, radio and file input), along with the
-[field](components/field.md), the label, the description and the error, is compiled by Blaze
-— but with `@blaze` alone. Folding would bake the sequence Shape uses to invent an id for a
-field nobody named, so a loop of unnamed fields would emit the same id and the same `for` for
-every row.
+**The rest of the field components do not fold**, and the reason is a counter rather than config.
+Every control (the input, select, textarea, checkbox, radio and file input), along with the
+[field](components/field.md), the label and the description, is compiled by Blaze — but with
+`@blaze` alone. Folding would bake the sequence Shape uses to invent an id for a field nobody
+named, so a loop of unnamed fields would emit the same id and the same `for` for every row.
+
+They read the error bag as well, to decide whether a control is styled and announced as invalid,
+which is the same problem the message above solves with an island. The message could solve it in
+one place because the bag is the only thing it renders; a control weaves the answer through the
+class on its box, so the same trick would mean holding back the element rather than a branch
+inside it.
 
 These components share a field name through `@aware`, and the two pipelines compile that
 directive differently: Blaze walks only a component's ancestors where Blade checks the
